@@ -1,0 +1,22 @@
+#!/bin/sh
+
+#
+# This script is used to check the sync of the local repo
+# with the remote planetlab repository
+
+tmpfile=/tmp/chech_planetlab_sync.tmp
+
+# check for local copy sync
+svn diff > /tmp/chech_planetlab_sync.tmp
+if [ -s $tmpfile ] ; then
+	echo "Local repo unsynced, can not continue"
+	exit -1
+	rm $tmpfile
+fi
+
+# export remote copy
+svn --force export http://svn.planet-lab.org/svn/ipfw/trunk ./ >> /dev/null
+
+# check diffs again, output to the user
+svn diff 
+svn status | grep -v check_planetlab_sync

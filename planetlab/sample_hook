@@ -1,0 +1,34 @@
+#!/bin/sh
+
+#
+# Marta Carbone <marta.carbone@iet.unipi.it>
+# 2009 - Universita` di Pisa
+#
+# This is a sample hook file in charge to collect
+# statistical information on netconfig usage. It dumps
+# on a log file slicename, port and the configuration string
+# used to configure a dummynet experiment.
+#
+# Each time a user configure a dummynet port, this file
+# will be executed.
+# The following variables will be passed as argument:
+# 
+# ${SLICE} ${PORT} ${CONFIG_STRING} 
+# ${SLICE} The slicename executing the netconfig command
+# ${PORT} The port to be configured
+# ${CONFIG_STRING} The configuration string
+#
+# Note that this script can get additional information
+# by executing the ipfw command, e.g.
+# ipfw list		# list of installed rules
+# ipfw show		# list of rules and statistical information
+# ipfw pipe show	# list of pipes
+#
+# a complete list of ipfw commands is available at:
+# http://www.freebsd.org/cgi/man.cgi?query=ipfw&sektion=8
+
+# logfile
+LOG_FILE=/tmp/ipfw_hook.log
+
+echo -e `date` >> ${LOG_FILE}
+echo "$*" >> ${LOG_FILE}

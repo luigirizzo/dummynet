@@ -1,0 +1,84 @@
+#!/bin/sh
+#
+# ipfw	init the emulation service
+#
+# chkconfig: 2345 09 91
+# description: ipfw init and shutdown
+#
+
+# Source function library.
+. /etc/init.d/functions
+
+IPFW=ipfw
+IPFW_BACKEND=/vsys/ipfw-be
+IPFW_MOD=ipfw_mod
+
+if [ ! -x /sbin/$IPFW ] || [ ! -x ${IPFW_BACKEND} ]; then
+    echo -n "/sbin/$IPFW does not exist."; warning; echo
+    exit 0
+fi
+
+# Load the ipfw module, and initialize netconfig
+start() {
+	# load the module
+	modprobe $IPFW_MOD >& /dev/null
+	let ret=$?;
+        [ $ret -eq 0 ] && success || failure
+
+	# init netconfig
+	echo "super dbcleanup" | ${IPFW_BACKEND} root >& /dev/null
+	echo "super init" | ${IPFW_BACKEND} root >& /dev/null
+
+	return $ret
+}
+
+stop() {
+	# clean netconfig stuff
+	echo "super dbcleanup" | ${IPFW_BACKEND} root >& /dev/null
+	echo "Unloading $IPFW_MOD module: "
+
+	# unload the ipfw module
+	rmmod ${IPFW_MOD}
+	let ret=$?;
+	[ $ret -eq 0 ] && success || failure
+
+	return $ret
+}
+
+# echo the ipfw status
+status() {
+	# check for module presence
+	grep '^ipfw_mod$' /proc/modules >& /dev/null || echo "ipfw not loaded" && return 0
+
+	# Show active users
+	USERS=$(grep BLOCK /tmp/ff | wc -l)
+	echo "ipfw is loaded and there are currently ${USERS} with active emulation."
+	return 0
+}
+
+# main
+case "$1" in
+    start)
+	start
+	RETVAL=$?
+	;;
+    stop)
+	stop
+	RETVAL=$?
+	;;
+    restart)
+	stop
+	start
+	RETVAL=$?
+	;;
+    status)
+	status
+	RETVAL=$?
+	;;
+    *)
+	echo $"Usage: $0 {start|stop|restart|status}"
+	exit 1
+	;;
+esac
+
+exit $RETVAL

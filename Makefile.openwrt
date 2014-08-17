@@ -1,0 +1,95 @@
+# Makefile to build the package in openwrt.
+# goes into package/ipfw3/Makefile
+#
+# Edit IPFW_DIR to point to the directory with the sources for ipfw
+
+IPFW_DIR := $(TOPDIR)/../ipfw3
+
+include $(TOPDIR)/rules.mk
+include $(INCLUDE_DIR)/kernel.mk
+
+PKG_NAME:=kmod-ipfw3
+PKG_RELEASE:=1
+
+# MV is undefined
+MV ?= mv
+
+include $(INCLUDE_DIR)/package.mk
+
+#Stuff depending on kernel version
+ifeq ($(KERNEL),2.6)
+
+VERS:=2.6
+IPFW_MOD:=ipfw_mod.ko
+IPFW_SRC_DIR:=M
+
+else
+
+VERS:=openwrt
+CFLAGS_WRT:=-DSYSCTL_NODE -DEMULATE_SYSCTL
+IPFW_MOD:=ipfw_mod.o
+IPFW_SRC_DIR:=SUBDIRS
+
+endif
+
+# Description for the package.
+# The names KernelPackage/ipfw3 must match the arguments to the
+# call $(eval $(call KernelPackage,ipfw3)) used to build it
+
+define KernelPackage/ipfw3
+ SUBMENU:=Other modules
+ TITLE:= IPFW and dummynet
+ # FILES is what makes up the module, both kernel and userland
+ # It must be in the KernelPackage section
+ FILES := $(PKG_BUILD_DIR)/dummynet2/$(IPFW_MOD) $(PKG_BUILD_DIR)/ipfw/ipfw
+ # AUTOLOAD:=$(call AutoLoad,80,ipfw_mod)
+endef
+
+define KernelPackage/ipfw3/description
+ This package contains the ipfw and dummynet module
+endef
+
+# Standard entries for the openwrt builds: Build/Prepare and Build/Compile
+# Remember that commands must start with a tab
+
+# 'prepare' instructions for both kernel and userland
+# We copy the entire subtree, then build include_e/ which
+# contains empty headers used by the kernel sources.
+define Build/Prepare
+  # $(warning Preparing ipfw sources)
+	mkdir -p $(PKG_BUILD_DIR)
+	$(CP) -Rp $(IPFW_DIR)/* $(PKG_BUILD_DIR)/
+	(cd $(PKG_BUILD_DIR)/ipfw && $(MAKE) include_e )
+	(cd $(PKG_BUILD_DIR)/dummynet2 && $(MAKE) include_e )
+endef
+
+define Build/Compile
+	# compile the kernel part for openwrt
+	$(MAKE) -C "$(LINUX_DIR)" \
+		CROSS_COMPILE="$(TARGET_CROSS)" \
+		ARCH="$(LINUX_KARCH)" \
+		$(IPFW_SRC_DIR)="$(PKG_BUILD_DIR)/dummynet2" \
+		VER=$(VERS) modules
+	# compile the userland part for openwrt
+	$(MAKE) -C $(PKG_BUILD_DIR)/ipfw \
+		$(TARGET_CONFIGURE_OPTS) \
+		CFLAGS="$(TARGET_CFLAGS) $(CFLAGS_WRT) -I./include_e -I./include -include ../glue.h -DNO_ALTQ -D__BSD_VISIBLE" \
+		VER=$(VERS) all
+endef
+
+define Package/ipfw3-userland
+  SECTION:=utils
+  CATEGORY:=Utilities
+  TITLE := /sbin/ipfw
+  DESCRIPTION := This is the control program for ipfw and dummynet
+endef
+
+define Package/ipfw3-userland/install
+	$(INSTALL_DIR) $(1) /sbin
+endef
+
+# XXX not entirely clear why the install entry for userland works,
+# given that /sbin/ipfw is in KernelPackage/ipfw3
+
+$(eval $(call Package,ipfw3-userland))
+$(eval $(call KernelPackage,ipfw3))

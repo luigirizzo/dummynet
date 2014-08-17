@@ -1,0 +1,11 @@
+--- include/asm-mips/param_orig.h	2010-02-23 12:45:58.000000000 +0100
++++ include/asm-mips/param.h	2010-02-23 12:00:31.000000000 +0100
+@@ -41,7 +41,7 @@
+    counter is increasing.  This value is independent from the external value
+    and can be changed in order to suit the hardware and application
+    requirements.  */
+-#  define HZ 100
++#  define HZ 1000
+ #  define hz_to_std(a) (a)
+ 
+ #endif /* Not a DECstation  */

@@ -1,0 +1,275 @@
+#
+# $Id: README 11691 2012-08-12 21:32:37Z luigi $
+#
+
+This directory contains a port of ipfw and dummynet to Linux and Windows.
+This version of ipfw and dummynet is called "ipfw3" as it is the
+third major rewrite of the code.  The source code here comes straight
+from FreeBSD (roughly the version in HEAD as of February 2010),
+plus some glue code and headers written from scratch.  Unless
+specified otherwise, all the code here is under a BSD license.
+
+Specific build instructions are below, and in general produce
+
+	a kernel module,	ipfw_mod.ko (ipfw.sys on windows)
+	a userland program,	/sbin/ipfw (ipfw.exe on windows)
+
+which you need to install on your system.
+
+CREDITS:
+    Luigi Rizzo (main design and development)
+    Marta Carbone (Linux and Planetlab ports)
+    Riccardo Panicucci (modular scheduler support)
+    Francesco Magno (Windows port)
+    Fabio Checconi (the QFQ scheduler)
+    Funding from Universita` di Pisa (NETOS project),
+	European Commission (ONELAB2 project)
+	ACM SIGCOMM (Sigcomm Community Projects Award, April 2012)
+    
+------ INSTALL/REMOVE INSTRUCTIONS ------
+
+Linux
+    INSTALL:
+	# Do the following as root
+	insmod ./dummynet2/ipfw_mod.ko
+	cp ipfw/ipfw /usr/local/sbin
+    REMOVE:
+	rmmod ipfw_mod.ko
+
+OpenWRT
+    INSTALL:	# use the correct name for your system
+	opkg install  kmod-ipfw3_2.4.35.4-brcm-2.4-1_mipsel.ipk #install
+	ls -l ls -l /lib/modules/2.4.35.4/ipfw*     # check
+	insmod /lib/modules/2.4.35.4/ipfw_mod.o     # load the module
+	/lib/modules/2.4.35.4/ipfw show             # launch the userspace tool
+    REMOVE:
+	rmmod ipfw_mod.o                            # remove the module
+
+Windows:
+    A pre-built version is in binary/ and binary64/ directories.
+
+    INSTALL THE NDIS DRIVER
+	- open the configuration panel for the network card in use
+	  (right click on the icon on the SYSTRAY, or go to
+	  Control Panel -> Network and select one card)
+	- click on Properties->Install->Service->Add
+	- click on 'Driver Disk' and select 'netipfw.inf' in this folder
+	- select 'ipfw+dummynet' which is the only service you should see
+	- click accept on the warnings for the installation of an unsigned
+	  driver (roughly twice per existing network card)
+
+	Now you are ready to use the emulator. To configure it, open a 'cmd'
+	window (REMEMBER to run it as Administrator)
+	and you can use the ipfw command from the command line.
+	Otherwise click on the 'TESTME.bat' which is a batch program that
+	runs various tests.
+	REMEMBER: you need to run ipfw as administrator.
+
+    REMOVE:
+	- select a network card as above.
+	- click on Properties
+	- select 'ipfw+dummynet'
+	- click on 'Remove'
+
+
+------ BUILD INSTRUCTIONS ------
+
++ Windows 32 bit and 64 bit (XP, Windows7)
+
+    To build your own version of the package you need:
+	- cygwin, http://www.cygwin.com/ with base packages, make,
+	  c compiler, possibly an editor and subversion.
+	  This is used to build the userspace control program, ipfw.exe
+
+	- Microsoft Windows Driver Kit Version 7.1.0, available from
+	    http://www.microsoft.com/en-us/download/details.aspx?id=11800
+	    (ISO image, GRMWDK_EN_7600_1.ISO)
+	  This is used to build the kernel module.
+
+	- optionally, DbgView if you want to see diagnostics coming from
+	  the kernel module. You can find it at
+
+	    http://technet.microsoft.com/en-us/sysinternals/bb896647.aspx
+
+    Check the Makefile in the root directory to make sure that the WDK is
+    installed in the place indicated by DRIVE and DDKDIR variables
+    (otherwise pass the correct values to the Makefile).
+    Open a shell from cygwin, move to this directory, and run "make" for
+    the 32-bit version, "make win64" for the 64 bit version.
+    This will produce in the binary/ or binary64/ directory the
+    following files:
+	ipfw.exe (you also need cygwin1.dll)
+	ipfw.sys (an NDIS intermediate filter driver)
+	netipfw.inf and netipfw_m.inf (installer files)
+
+    Cross compilation of the userland side under FreeBSD is possible with
+	gmake TCC=`pwd`/tcc-0.9.25-bsd/win32 CC=`pwd`/tcc-0.9.25-bsd/win32/bin/wintcc
+    (wintcc is a custom version of tcc which produces Windows code)
+
+    NOTE: the 64-bit version is compiled as a 32-bit executable for userspace,
+	with appropriate changes to produce 64-bit pointers.
+	The kernel module is built using the MSC 'build' utility instead
+	of 'make'. THE MODULE IS NOT SIGNED.
+    IMPORTANT: Windows 64-bit will not load unsigned kernel modules unless
+	you boot with 'F8' and disable checks for signed modules.
+
+***** Linux 2.6 and above ******
+
+	make [KSRC=/path/to/linux USRDIR=/path/to/usr]
+
+    where the two variables are optional an point to the linux kernel
+    sources and the /usr directory. Defaults are USRDIR=/usr and
+    KSRC=/lib/modules/`uname -r`/build 	--- XXX check ?
+
+    NOTE: make sure CONFIG_NETFILTER is enabled in the kernel
+    configuration file. You need the ncurses devel library,
+    that can be installed according your distro with:
+	apt-get install ncurses-dev	# for debian based distro
+	yum -y install ncurses-dev	# for fedora based distro
+    You can enable CONFIG_NETFILTER by doing:
+    
+	"(cd ${KSRC}; make menuconfig)"
+
+    and enabling the option listed below:
+
+        Networking --->
+	    Networking options  --->
+              [*] Network packet filtering framework (Netfilter)
+
+    If you have not yet compiled your kernel source, you need to
+    prepare the build environment:
+
+	(cd $(KSRC); make oldconfig; make prepare; make scripts)
+
+***** Linux 2.4.x *****
+
+    Almost as above, with an additional VER=2.4
+
+	make VER=2.4 KSRC=...
+
+    For 2.4, if KSRC is not specified then we use
+    	KSRC ?= /usr/src/`uname -r`/build
+
+    You need to follow the same instruction for the 2.6 kernel, enabling
+    netfilter in the kernel options:
+
+    Networking options  --->
+      [*] Network packet filtering (replaces ipchains)
+
+***** Openwrt package *****
+
+    (Tested with kamikaze_8.09.1 and Linux 2.4)
+
+    + Download and extract the OpenWrt package, e.g.
+
+	wget http://downloads.openwrt.org/kamikaze/8.09.1/kamikaze_8.09.1_source.tar.bz2
+	tar xvjf kamikaze_8.09.1_source.tar.bz2
+
+    + move to the directory with the OpenWrt sources (the one that
+      contains Config.in, rules.mk ...)
+
+	cd kamikaze_8.09.1
+
+    + Optional: Add support for 1ms resolution.
+
+	By default OpenWRT kernel is compiled with HZ=100; this implies
+        that all timeouts are rounded to 10ms, too coarse for dummynet.
+        The file 020-mips-hz1000.patch contains a kernel patch to build
+	a kernel with HZ=1000 (i.e. 1ms resolution) as in Linux/FreeBSD.
+        To apply this patch, go in the kernel source directory and
+        patch the kernel
+
+		cd build_dir/linux-brcm-2.4/linux-2.4.35.4
+		cat $IPFW3_SOURCES/020-mips-hz1000.patch | patch -p0
+
+	where IPFW3_SOURCES contains the ipfw3 source code.
+	Now, the next kernel recompilation will use the right HZ value
+
+    + Optional: to be sure that the tools are working, make a first
+      build as follows:
+
+	- run "make menuconfig" and set the correct target device,
+	  drivers, and so on;
+	- run "make" to do the build
+
+    + Add ipfw3 to the openwrt package, as follows:
+
+      - copy the code from this directory to the place used for the build:
+
+		cp -Rp /path_to_ipfw3 ../ipfw3; 
+
+	If you want, you can fetch a newer version from the web
+	(cd ..; rm -rf ipfw3; \
+	wget http://info.iet.unipi.it/~luigi/dummynet/ipfw3-latest.tgz;\
+	tar xvzf ipfw3-latest.tgz)
+
+      - run the following commands:
+	(mkdir package/ipfw3; \
+	cp ../ipfw3/Makefile.openwrt package/ipfw3/Makefile)
+
+	to create the package/ipfw3 directory in the OpenWrt source
+	directory, and copy Makefile.openwrt to package/ipfw3/Makefile ;
+
+      - if necessary, edit package/ipfw3/Makefile and set IPFW_DIR to point to
+	the directory ipfw3, which contains the sources;
+
+      - run "make menuconfig" and select kmod-ipfw3 as a module <M> in
+	    Kernel Modules -> Other modules -> kmod-ipfw3 
+
+      - run "make" to build the package, "make V=99" for verbose build.
+
+      - to modify the code, assuming you are in directory "kamikaze_8.09.1"
+	
+	(cd ../ipfw3 && vi ...the files you are interested in )
+	rm -rf build_dir/linux-brcm-2.4/kmod-ipfw3
+	make package/ipfw3/compile V=99
+
+    The resulting package is located in bin/packages/mipsel/kmod-ipfw3*,
+    upload the file and install on the target system, as follows:
+
+    opkg install  kmod-ipfw3_2.4.35.4-brcm-2.4-1_mipsel.ipk #install
+    ls -l ls -l /lib/modules/2.4.35.4/ipfw*     # check
+    insmod /lib/modules/2.4.35.4/ipfw_mod.o     # load the module
+    /lib/modules/2.4.35.4/ipfw show             # launch the userspace tool
+    rmmod ipfw_mod.o                            # remove the module
+
+***** PLANETLAB BUILD (within a slice) *****
+These instruction can be used by PlanetLab developers to compile
+the dummynet module on a node. To install the module on the node
+users need root access in root context.  PlanetLab users that want
+to use the dummynet package should ask to PlanetLab support for
+nodes with dummynet emulation capabilities.
+
+    Follow the instructions below. You can just cut&paste
+
+	# install the various tools if not available
+	sudo yum -y install subversion rpm-build rpm-devel m4 redhat-rpm-config make gcc
+	# new build installation requires the gnupg package
+	sudo yum -y install gnupg
+	# the linux kernel and the ipfw source can be fetched by git
+	sudo yum -y install git
+
+	# create and move to a work directory
+	mkdir -p test
+	# extract a planetlab distribution to directory XYZ
+	(cd test; git clone git://git.onelab.eu/build ./XYZ)
+	# download the specfiles and do some patching.
+	# Results are into SPEC/ (takes 5 minutes)
+	(cd test/XYZ; make stage1=true PLDISTRO=onelab)
+	# Building the slice code is fast, the root code takes longer
+	# as it needs to rebuild the whole kernel
+	(cd test/XYZ; sudo make ipfwslice PLDISTRO=onelab)
+	(cd test/XYZ; sudo make ipfwroot PLDISTRO=onelab)
+
+    The kernel dependency phase is a bit time consuming, but does not
+    need to be redone if we are changing the ipfw sources only.
+    To clean up the code do
+	(cd test/XYZ; sudo make ipfwroot-clean ipfwslice-clean)
+    then after you have updated the repository again
+	(cd test/XYZ; sudo make ipfwslice ipfwroot)
+
+--- References
+[1] https://svn.planet-lab.org/wiki/VserverCentos
+[2] http://wiki.linux-vserver.org/Installation_on_CentOS
+[3] http://mirror.centos.org/centos/5/isos/
+[4] More information are in /build/README* files 

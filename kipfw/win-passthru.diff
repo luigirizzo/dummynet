@@ -1,0 +1,251 @@
+diff -ubwrp original_passthru/miniport.c kipfw/miniport.c
+--- original_passthru/miniport.c	2012-08-01 14:34:15.096679600 +0200
++++ kipfw/miniport.c	2012-08-01 14:34:11.377929600 +0200
+@@ -223,6 +223,7 @@ Return Value:
+     //
+     // Use NDIS 5.1 packet stacking:
+     //
++    if (0)	// XXX IPFW - make sure we don't go in here
+     {
+         PNDIS_PACKET_STACK        pStack;
+         BOOLEAN                   Remaining;
+@@ -347,6 +348,25 @@ Return Value:
+                                                 MediaSpecificInfo,
+                                                 MediaSpecificInfoSize);
+         }
++#if 1	/* IPFW: query the firewall */
++	/* if dummynet keeps the packet, we mimic success.
++	 * otherwise continue as usual.
++	 */
++		{
++			int ret = ipfw2_qhandler_w32(MyPacket, OUTGOING,
++					MiniportAdapterContext);
++			if (ret != PASS) {
++				if (ret == DROP)
++					return NDIS_STATUS_FAILURE;
++				else {  //dummynet kept the packet
++#ifndef WIN9X
++					NdisIMCopySendCompletePerPacketInfo (Packet, MyPacket);
++#endif
++					return NDIS_STATUS_SUCCESS; //otherwise simply continue
++				}
++			}
++		}
++#endif	/* end of IPFW code */
+ 
+         NdisSend(&Status,
+                  pAdapt->BindingHandle,
+diff -ubwrp original_passthru/passthru.c kipfw/passthru.c
+--- original_passthru/passthru.c	2012-08-01 14:34:15.268554600 +0200
++++ kipfw/passthru.c	2012-08-01 14:34:11.534179600 +0200
+@@ -47,8 +47,15 @@ NDIS_HANDLE        NdisWrapperHandle;
+ // To support ioctls from user-mode:
+ //
+ 
+-#define LINKNAME_STRING     L"\\DosDevices\\Passthru"
+-#define NTDEVICE_STRING     L"\\Device\\Passthru"
++#define STR2(x) #x
++#define STR(x) STR2(x)
++#define DOSPREFIX "\\DosDevices\\"
++#define NTPREFIX "\\Device\\"
++#define WIDEN2(x) L ## x
++#define WIDEN(x) WIDEN2(x)
++#define LINKNAME_STRING			WIDEN(DOSPREFIX) WIDEN(STR(MODULENAME))
++#define NTDEVICE_STRING			WIDEN(NTPREFIX) WIDEN(STR(MODULENAME))
++#define PROTOCOLNAME_STRING		WIDEN(STR(MODULENAME))
+ 
+ NDIS_HANDLE     NdisDeviceHandle = NULL;
+ PDEVICE_OBJECT  ControlDeviceObject = NULL;
+@@ -136,8 +143,8 @@ Return Value:
+         // Either the Send or the SendPackets handler should be specified.
+         // If SendPackets handler is specified, SendHandler is ignored
+         //
+-        MChars.SendHandler = NULL;    // MPSend;
+-        MChars.SendPacketsHandler = MPSendPackets;
++        MChars.SendHandler = MPSend;    // IPFW: use MPSend, not SendPackets
++        MChars.SendPacketsHandler = NULL;
+ 
+         Status = NdisIMRegisterLayeredMiniport(NdisWrapperHandle,
+                                                   &MChars,
+@@ -165,7 +172,7 @@ Return Value:
+         // This is needed to ensure that NDIS can correctly determine
+         // the binding and call us to bind to miniports below.
+         //
+-        NdisInitUnicodeString(&Name, L"Passthru");    // Protocol name
++        NdisInitUnicodeString(&Name, PROTOCOLNAME_STRING);    // Protocol name
+         PChars.Name = Name;
+         PChars.OpenAdapterCompleteHandler = PtOpenAdapterComplete;
+         PChars.CloseAdapterCompleteHandler = PtCloseAdapterComplete;
+@@ -205,6 +212,8 @@ Return Value:
+         NdisTerminateWrapper(NdisWrapperHandle, NULL);
+     }
+ 
++    ipfw_module_init();	// IPFW - start the system
++
+     return(Status);
+ }
+ 
+@@ -276,7 +285,8 @@ Return Value:
+         DispatchTable[IRP_MJ_CREATE] = PtDispatch;
+         DispatchTable[IRP_MJ_CLEANUP] = PtDispatch;
+         DispatchTable[IRP_MJ_CLOSE] = PtDispatch;
+-        DispatchTable[IRP_MJ_DEVICE_CONTROL] = PtDispatch;
++	// IPFW we use DevIoControl ?
++        DispatchTable[IRP_MJ_DEVICE_CONTROL] = DevIoControl;
+         
+ 
+         NdisInitUnicodeString(&DeviceName, NTDEVICE_STRING);
+@@ -453,6 +463,7 @@ PtUnload(
+     
+     NdisFreeSpinLock(&GlobalLock);
+ 
++    ipfw_module_exit(); // IPFW unloading dummynet
++
+     DBGPRINT(("PtUnload: done!\n"));
+ }
+-
+diff -ubwrp original_passthru/passthru.h kipfw/passthru.h
+--- original_passthru/passthru.h	2012-08-01 14:34:15.049804600 +0200
++++ kipfw/passthru.h	2012-08-01 14:34:11.362304600 +0200
+@@ -61,6 +61,13 @@ PtDispatch(
+     IN PIRP                      Irp
+     );
+ 
++DRIVER_DISPATCH DevIoControl;
++NTSTATUS
++DevIoControl(
++    IN PDEVICE_OBJECT            pDeviceObject,
++    IN PIRP                      pIrp
++    );
++
+ NDIS_STATUS
+ PtRegisterDevice(
+     VOID
+@@ -366,6 +373,7 @@ PtDereferenceAdapt(
+ typedef struct _SEND_RSVD
+ {
+     PNDIS_PACKET    OriginalPkt;
++    struct mbuf*    pMbuf; // IPFW extension, reference to the mbuf
+ } SEND_RSVD, *PSEND_RSVD;
+ 
+ //
+@@ -376,6 +384,7 @@ typedef struct _SEND_RSVD
+ typedef struct _RECV_RSVD
+ {
+     PNDIS_PACKET    OriginalPkt;
++    struct mbuf*    pMbuf; // IPFW extension, reference to the mbuf
+ } RECV_RSVD, *PRECV_RSVD;
+ 
+ C_ASSERT(sizeof(RECV_RSVD) <= sizeof(((PNDIS_PACKET)0)->MiniportReserved));
+@@ -475,3 +484,17 @@ IsIMDeviceStateOn(
+ */
+ #define IsIMDeviceStateOn(_pP)        ((_pP)->MPDeviceState == NdisDeviceStateD0 && (_pP)->PTDeviceState == NdisDeviceStateD0 ) 
+ 
++#include "winmissing.h"
++
++int ipfw_module_init(void);
++void ipfw_module_exit(void);
++int ipfw2_qhandler_w32(PNDIS_PACKET pNdisPacket, int direction,
++	NDIS_HANDLE Context);
++int ipfw2_qhandler_w32_oldstyle(int direction, NDIS_HANDLE ProtocolBindingContext,
++		unsigned char* HeaderBuffer, unsigned int HeaderBufferSize,
++		unsigned char* LookAheadBuffer, unsigned int LookAheadBufferSize,
++	    unsigned int PacketSize);
++void CleanupReinjected(PNDIS_PACKET Packet, struct mbuf* m, PADAPT pAdapt);
++void hexdump(PUCHAR,int, const char *);
++void my_init();
++void my_exit();
+\ Manca newline alla fine del file
+Solo in original_passthru: passthru.htm
+Solo in original_passthru: passthru.rc
+diff -ubwrp original_passthru/protocol.c kipfw/protocol.c
+--- original_passthru/protocol.c	2012-08-01 14:34:15.112304600 +0200
++++ kipfw/protocol.c	2012-08-01 14:34:11.409179600 +0200
+@@ -841,6 +841,14 @@ Return Value:
+         SendRsvd = (PSEND_RSVD)(Packet->ProtocolReserved);
+         Pkt = SendRsvd->OriginalPkt;
+     
++#if 1	// IPFW - new code
++	//DbgPrint("SendComplete: packet %p pkt %p\n", Packet, Pkt);
++	if (Pkt == NULL) { //this is a reinjected packet, with no 'father'
++		CleanupReinjected(Packet, SendRsvd->pMbuf, pAdapt);
++		return;
++	}
++#endif /* IPFW */
++    
+ #ifndef WIN9X
+         NdisIMCopySendCompletePerPacketInfo (Pkt, Packet);
+ #endif
+@@ -1021,6 +1029,13 @@ Return Value:
+ 
+                 if (pAdapt->MiniportHandle != NULL)
+                 {
++#if 1	/* IPFW: query the firewall */
++					int	ret;
++					ret = ipfw2_qhandler_w32(MyPacket, INCOMING,
++						ProtocolBindingContext);
++					if (ret != PASS)
++					return 0; //otherwise simply continue
++#endif /* end of IPFW code */
+                     NdisMIndicateReceivePacket(pAdapt->MiniportHandle, &MyPacket, 1);
+                 }
+ 
+@@ -1055,6 +1070,13 @@ Return Value:
+         {
+             case NdisMedium802_3:
+             case NdisMediumWan:
++				//DbgPrint("EthIndicateReceive context %p, header at %p len %u, lookahead at %p len %u, packetsize %u\n",ProtocolBindingContext,HeaderBuffer,HeaderBufferSize,LookAheadBuffer,LookAheadBufferSize,PacketSize);
++				//hexdump(HeaderBuffer,HeaderBufferSize+LookAheadBufferSize,"EthIndicateReceive");
++			{
++				int ret = ipfw2_qhandler_w32_oldstyle(INCOMING, ProtocolBindingContext, HeaderBuffer, HeaderBufferSize, LookAheadBuffer, LookAheadBufferSize, PacketSize);
++				if (ret != PASS)
++					return NDIS_STATUS_SUCCESS;
++			}
+                 NdisMEthIndicateReceive(pAdapt->MiniportHandle,
+                                              MacReceiveContext,
+                                              HeaderBuffer,
+@@ -1120,6 +1142,21 @@ Return Value:
+     PADAPT        pAdapt =(PADAPT)ProtocolBindingContext;
+     ULONG         Proc = KeGetCurrentProcessorNumber();      
+ 
++	/* Warning: this is a poor implementation of the PtReceiveComplete
++	 * made by MS, and it's a well known (but never fixed) issue.
++	 * Since the ProcessorNumber here can be different from the one
++	 * that processed the PtReceive, sometimes NdisMEthIndicateReceiveComplete
++	 * will not be called, causing poor performance in the incoming traffic.
++	 * In our driver, PtReceive is called for IP packets ONLY by particulary 
++	 * old NIC drivers, and the poor performance can be seen even 
++	 * in traffic not handled by ipfw or dummynet.
++	 * Fortunately, this is quite rare, all the incoming IP packets
++	 * will arrive through PtReceivePacket, and this callback will never
++	 * be called. For reinjected traffic, a workaround is done
++	 * commuting the ReceivedIndicationFlag and calling
++	 * NdisMEthIndicateReceiveComplete manually for each packet.
++	 */
++
+     if (((pAdapt->MiniportHandle != NULL)
+                 && (pAdapt->MPDeviceState == NdisDeviceStateD0))
+                 && (pAdapt->ReceivedIndicationFlags[Proc]))
+@@ -1199,7 +1236,7 @@ Return Value:
+     // See also: PtReceive(). 
+     //
+     (VOID)NdisIMGetCurrentPacketStack(Packet, &Remaining);
+-    if (Remaining)
++    if (0 && Remaining)
+     {
+         //
+         // We can reuse "Packet". Indicate it up and be done with it.
+@@ -1247,6 +1284,13 @@ Return Value:
+ 
+         if (pAdapt->MiniportHandle != NULL)
+         {
++#if 1	/* IPFW: query the firewall */
++	    int	ret;
++	    ret = ipfw2_qhandler_w32(MyPacket, INCOMING,
++			ProtocolBindingContext);
++	    if (ret != PASS)
++			return 0; //otherwise simply continue
++#endif /* end of IPFW code */
+             NdisMIndicateReceivePacket(pAdapt->MiniportHandle, &MyPacket, 1);
+         }
+ 

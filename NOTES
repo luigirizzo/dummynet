@@ -1,0 +1,220 @@
+#
+# $Id: NOTES 6552 2010-06-15 11:24:59Z svn_panicucci $
+#
+
+---------------------------------------------------------------------
+---  DEVELOPER NOTES ------------------------------------------------
+
+Both the client and the kernel code use almost unmodified sources
+from FreeBSD (just a very small number of sections #ifdef'ed out
+for features not relevant or not implemented).
+
+In both cases we provide two set of headers:
+ - one set is made of empty files, automatically generated, to replace
+   FreeBSD headers not available or conflicting on the ported platforms.
+ - one set is made of custom files, sometimes copied verbatim
+   from FreeBSD, sometimes containing only the minimal set of
+   macros/ struct/ prototypes required by the port.
+
+Additionally, we have a small set of .c files providing functions not
+available in the port platforms, and hooks for the sockopt/packet
+data.
+
+
+TODO 20100205:
++ use an appropriate identifier instead of LINUX24
++ find the discharging module hook, in order to force a queue flush
++ better matching on interface names (case insensitive etc ?)
++ match by interface address
++ verify path
++ send keepalives (20100301 marta: implemented)
++ pullup of data in external buffers
++ O_TAG
++ O_DIVERT
++ O_TEE
++ O_SETFIB
++ kmem_cache_alloc 
+
+TODO (OpenWRT) 20090622
++ add a module compilation for 2.6
+
+TODO (FreeBSD, general)
++ New features related to the forthcoming IPv6 are missing, as the IPv6
+support for lookup tables that currently support IPv4 addresses only.
+One of the goal of this project is to add the tables feature to the
+IPv6 protocol.
+
++ The current code implements rules listing requests as a single
+request returning both static and dynamic rules as a whole block. This
+operation requires a lock to be held for the time needed to get the
+full list of rules, regardless of the requested rules.  I propose to
+break up the rule request in two parts, for static and dynamic rules, in
+order to avoid to lock the whole struct for a subset of rules required.
+
++ At last, due to improvement and contribution to the code, the tool
+significantly grown over the time with new functionalities and features,
+leaving the general view aside. An example of this will be the use of
+dispatching table instead some very long switch case, making the resulting
+code more readable and hopefully a faster execution.
+
++ XXX can't find the ipfw_* indirection...
+
+DETAILED PORTING INFO
+
+--- ipfw (userland) on linux ---
+
+The port is relatively trivial. Communication with the kernel occurs
+through a raw socket using [gs]etsockopt(), and all is needed is the
+availability of ip_fw.h and ip_dummynet.h headers to describe the
+relevant data structures.
+
+--- kernel ipfw on linux ---
+
+Sources are mostly unmodified, except for commenting out
+unsupported features (tables, in-kernel nat...).
+The port requires a rather large number of empty headers.
+Other porting issues are in ipfw2_mod.c
+
+--- build as an Openwrt package
+
+------ WINDOWS PORT ------
+
+We started from the wipfw port available at [WIPFW] , but
+most of the port is done from scratch using the most recent
+version of ipfw+dummynet from HEAD/RELENG_7 as of March 2009
+
+# WIPFW: wipfw.sourceforge.net
+#binary:
+http://downloads.sourceforge.net/wipfw/wipfw-0.3.2b.zip?use_mirror=mesh
+http://downloads.sourceforge.net/wipfw/wipfw-0.2.8-source.zip
+
+--- DEVELOPMENT TOOLS:
+
+At least initially, to build the code you need a pc with
+windows installed and the [WINDDK] from the microsoft site.
+Other tools like the new WDK should work as well.
+
+The 'standard' way used by WDK/WINDDK is to run a 'build'
+script which in turn calls nmake and then the microsoft
+compiler [CL] and linker [LINK]. See the documentation for
+command line switches for these tools, they are similar but
+not the same as the equivalent gcc switches. In particular,
+a / is often used to replace - though both forms are accepted.
+
+The steps to do in order to launch the build environment follows:
+
+ + download winddk from microsoft.com 
+ + install 
+ + run the Free Build Enviroment from:
+
+	Start -> All Program -> WINDDK ->
+	[NT|XP|2000] -> Free Build Environment
+
+ + change dir to .src and type `build' in command line
+
+For our purposes, however, it is much more convenient to use
+cygwin [CYGWIN] and invoke CL and LINK using gmake
+
+A debugging tools is:
+	http://technet.microsoft.com/en-us/sysinternals/bb896647.aspx
+it simply display the kernel-mode debug output.
+Use the DbgPrint() function, that is something similar to printk().
+Can be lauched with dbgview.exe.
+
+After a succesfully compilation and link, you can launch the program
+in user space simply executing the binary file, while for the kernel
+space you need to do the following steps:
+
+cp ipfw.sys /cygdrive/c/WINDOWS/system32/drivers/
+ipfw install_drv System32\DRIVERS\ip_fw.sys
+net start ip_fw
+
+
+=======
+--- ARCHITECTURE ---
+
+The main part of the userland program mostly work as the
+unix equivalent, the only issue is to provide empty
+header files to replace those not available in Windows,
+and include the winsock2 headers to access some network
+related functions and headers.
+
+Communication with the kernel module does not use a raw IP socket
+as in the unix version. Instead, we inherit the same method
+used in ipfw -- a replacement for socket() creates a handle
+to access the control structure, and setsockopt/getsockopt
+replacements are also used to communicate with the kernel
+side. This is implemented in win32.c
+
+In order to load the module and activate it, we also use
+the same technique suggested in wipfw -- the main() is
+extended (with a wrapper) so that it can handle additional
+commands to install/control/deinstall the service and
+call the appropriate actions. See svcmain.c for details.
+
+--- PORTING ISSUES:
+
+Most of the unix hierarchy of headers is not available so we
+have to replicate them.
+
+gcc attributes are also not present.
+
+C99 types are not present, remapped in <sys/cdefs.h>
+Also, we don't have C99 initializers which sometimes gives trouble.
+
+--- USEFUL LINKS:
+
+[WIPFW]
+	http://wipfw.sourceforge.net/
+
+[WINDDK]
+	http://www.microsoft.com/whdc/devtools/ddk/default.mspx
+
+[CL]
+	http://msdn.microsoft.com/en-us/library/610ecb4h.aspx
+	command line syntax
+
+[CYGWIN]
+	http://www.cygwin.com/setup.exe
+Windows Driver Kit
+http://www.microsoft.com/whdc/DevTools/WDK/WDKpkg.mspx
+
+Debug Symbols for WinXP SP3
+http://www.microsoft.com/whdc/devtools/debugging/symbolpkg.mspx#d
+
+DbgView
+http://technet.microsoft.com/en-us/sysinternals/bb896647.aspx
+
+Cygwin
+http://www.cygwin.com/
+(installazione pacchetti di default + categoria devel)
+
+Winrar (il WDK e' distribuito in un file .iso)
+http://www.rarlab.com/download.htm
+
+puttycyg (terminale per cygwin)
+http://code.google.com/p/puttycyg/
+
+Tortoise SVN
+http://tortoisesvn.net/downloads
+
+EditPlus
+http://www.editplus.com/
+
+---------------------------------------------------------------------
+--- OPEN ISSUES/TODO ------------------------------------------------
+
+- Fix the build on OpenWRT for linux 2.6
+  [Forum: https://forum.openwrt.org/viewtopic.php?id=24990]
+- Compilation on 2.6 OpenWRT (target is MIPS Artheros 71xx) gives compilation
+  errors; [Send updates to: https://forum.openwrt.org/viewtopic.php?id=24990]
+- Windows stack corruption [a tricky bug in dummynet]
+- Windows ipv6 port [RE: Windows port of ipv6 in ipfw+dummynet]
+
+NOTE:
+- To allow compilation on OpenWRT with kernel 2.6 only the Makefile.opewrt
+  is modified to guess the kernel version (2.4/2.6)
+- ipfw3 Makefile is not modified.
+- Also compile on bigendian, but not tested yet...
+- Little changes in source code.
+

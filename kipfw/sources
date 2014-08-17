@@ -1,0 +1,20 @@
+TARGETNAME=ipfw
+TARGETTYPE=DRIVER
+
+C_DEFINES=$(C_DEFINES) -DNDIS_MINIPORT_DRIVER -DNDIS_WDM=1
+
+MSC_WARNING_LEVEL=/W2
+
+# The driver is built in the XP or .NET build environment
+# So let us build NDIS 5.1 version.
+C_DEFINES=$(C_DEFINES) -DNDIS51_MINIPORT=1
+C_DEFINES=$(C_DEFINES) -DNDIS51=1
+
+# Enable dummynet preprocessing macros
+C_DEFINES=$(C_DEFINES) /D_WIN32 /DMODULENAME=Ipfw /D_BSD_SOURCE /DKERNEL_MODULE /D_KERNEL /DKLD_MODULE /D__BSD_VISIBLE /DIPFIREWALL_DEFAULT_TO_ACCEPT /D__LITTLE_ENDIAN /DSYSCTL_NODE /DEMULATE_SYSCTL -FIwinmissing.h -FImissing.h -FI../glue.h /DWIN32_LEAN_AND_MEAN=1
+
+TARGETLIBS=$(DDK_LIB_PATH)\ndis.lib
+
+INCLUDES= include_e ; ../sys
+
+SOURCES= ip_fw2.c ip_fw_pfil.c ip_fw_sockopt.c ip_fw_dynamic.c ip_fw_table.c ip_fw_log.c radix.c in_cksum.c ip_dummynet.c ip_dn_io.c ip_dn_glue.c dn_heap.c dn_sched_fifo.c dn_sched_wf2q.c dn_sched_rr.c dn_sched_qfq.c dn_sched_prio.c ipfw2_mod.c bsd_compat.c md_win.c miniport.c protocol.c passthru.c debug.c

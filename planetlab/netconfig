@@ -1,0 +1,14 @@
+#!/bin/sh
+#
+# Marta Carbone, Luigi Rizzo
+# Copyright (C) 2009 Universita` di Pisa
+# $Id: netconfig 4533 2009-12-16 14:39:23Z luigi $
+#
+# This script is the frontend to be used with the vsys system.
+# It simply passes information to the backend and gets back the reply
+
+PIPE_IN=/vsys/ipfw-be.in
+PIPE_OUT=/vsys/ipfw-be.out
+
+sudo sh -c "echo $* >> ${PIPE_IN}"
+sudo sh -c "cat ${PIPE_OUT}"

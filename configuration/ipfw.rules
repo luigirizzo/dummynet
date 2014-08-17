@@ -1,0 +1,12 @@
+# This is a simple configuration file
+# add dummynet pipes and a firewall section
+
+# flush all rules ...
+# flush
+
+# dummynet configuration
+
+# firewall configuration
+add 1 allow all from any to any
+# ...
+add 65000 deny all from any to any

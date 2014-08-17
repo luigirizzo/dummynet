@@ -1,0 +1,14 @@
+This directorty contains some ipfw configurations and a scripts 
+to safely change the firewall rules.
+
+The firewall configuration comes from the FreeBSD initial script.
+The change_rules_linux.sh allows to change the ipfw rules and
+in case os a misconfiguration which prevents to reach the remote
+host, to restore the old ruleset.
+
+To configure the firewall behavior, edit the ipfw.conf file and 
+execute the ./change_rules_linux.sh script.
+
+The ipfw program executable should be located in /sbin (XXX)
+
+XXX seems we use something which is not compatible with dash
