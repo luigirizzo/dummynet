@@ -42,7 +42,8 @@ TARGET = kipfw
 # lets default for 2.6 for planetlab builds
 VER ?= 2.6
 
-$(warning ########## linux dir is $(LINUX_DIR) ###########)
+# $(warning ########## linux dir is $(LINUX_DIR) ###########)
+# $(warning ########## KERNELPATH is $(KERNELPATH) ###########)
 #--- General values for all types of build ---
 # obj-m is the target module
 obj-m := ipfw_mod.o

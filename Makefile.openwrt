@@ -17,7 +17,7 @@ MV ?= mv
 include $(INCLUDE_DIR)/package.mk
 
 #Stuff depending on kernel version
-$(warning -------- -kernel version $(KERNEL) -------)
+$(warning --- openwrt kernel version $(KERNEL) linux dir $(LINUX_DIR) -------)
 
 
 ifeq ($(KERNEL),2.4)
@@ -58,19 +58,24 @@ define Build/Prepare
   # $(warning Preparing ipfw sources)
 	mkdir -p $(PKG_BUILD_DIR)
 	$(CP) -Rp $(IPFW_DIR)/* $(PKG_BUILD_DIR)/
+	# we do not need cross parameters
 	(cd $(PKG_BUILD_DIR)/ipfw && $(MAKE) include_e )
 	(cd $(PKG_BUILD_DIR)/kipfw && $(MAKE) include_e )
 endef
 
 define Build/Compile
-	# compile the userland part for openwrt
+	$(warning  compile the userland part for ipfw/openwrt)
 	$(MAKE) -C $(PKG_BUILD_DIR)/ipfw \
+		LINUX_DIR=$(LINUX_DIR) \
 		$(TARGET_CONFIGURE_OPTS) \
 		CFLAGS="$(TARGET_CFLAGS) $(CFLAGS_WRT) -I./include_e -I./include -include ../glue.h -DNO_ALTQ -D__BSD_VISIBLE" \
-		VER=$(VERS) all
+		_VER=$(VERS) all
+	$(warning  compile the kernel part for ipfw/openwrt)
 	# compile the kernel part for openwrt
 	$(MAKE) -C "$(LINUX_DIR)" \
 		CROSS_COMPILE="$(TARGET_CROSS)" \
+		LINUX_DIR=$(LINUX_DIR) \
+		KERNELPATH=$(LINUX_DIR) \
 		ARCH="$(LINUX_KARCH)" \
 		$(IPFW_SRC_DIR)="$(PKG_BUILD_DIR)/kipfw" \
 		IPFW3_ROOT="$(PKG_BUILD_DIR)" \

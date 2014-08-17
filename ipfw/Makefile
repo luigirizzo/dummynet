@@ -6,6 +6,7 @@
 # Do not set with = or := so we can inherit from the caller
 
 include ../Makefile.inc
+TARGET := ipfw
 
 all: $(TARGET)
 
@@ -17,7 +18,6 @@ EXTRA_CFLAGS += -Wall
 EXTRA_CFLAGS += -include ../glue.h
 EXTRA_CFLAGS += -I ./include_e -I ./include
 
-TARGET := ipfw
 ifneq ($(VER),openwrt)
 ifeq ($(OSARCH),Linux)
     EXTRA_CFLAGS += -D__BSD_VISIBLE
@@ -88,7 +88,7 @@ CFLAGS += -DNO_ALTQ
 #OBJS += altq.o
 
 all: $(TARGET)
-	-@echo "Done build for $(OSARCH) VER $(VER)"
+	-@echo "Done build for $(OSARCH)"
 
 $(TARGET): $(OBJS)
 	$(MSG) "   LD  $@"
