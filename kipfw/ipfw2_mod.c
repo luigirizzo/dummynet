@@ -743,8 +743,8 @@ linux_lookup(const int proto, const __be32 saddr, const __be16 sport,
 	if ((1<<st) & GOOD_STATES) {
 		read_lock_bh(&sk->sk_callback_lock);
 		if (sk->sk_socket && sk->sk_socket->file) {
-			u->uid = sk->sk_socket->file->_CURR_UID;
-			u->gid = sk->sk_socket->file->_CURR_GID;
+			//u->uid = sk->sk_socket->file->_CURR_UID;
+			//u->gid = sk->sk_socket->file->_CURR_GID;
 		}
 		read_unlock_bh(&sk->sk_callback_lock);
 	} else {
