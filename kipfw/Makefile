@@ -42,6 +42,7 @@ TARGET = kipfw
 # lets default for 2.6 for planetlab builds
 VER ?= 2.6
 
+$(warning ########## linux dir is $(LINUX_DIR) ###########)
 #--- General values for all types of build ---
 # obj-m is the target module
 obj-m := ipfw_mod.o
@@ -74,12 +75,12 @@ ipfw-cflags += -include $(M)/missing.h	# headers
 $(warning ------ arch $(OSARCH) goals $(MAKECMDGOALS) -----------)
 
 ifeq ($(OSARCH),Windows)	#--- {  Windows block
-ifeq ($(VER),win64)
+  ifeq ($(VER),win64)
     $(warning ---- building for 64-bit windows ---)
     win_arch= -DAMD64=1
-else
+  else
     win_arch= -Di386=1
-endif
+  endif
     M ?= $(shell pwd)
     WIN_SRCS += md_win.c
     WIN_SRCS += miniport.c protocol.c passthru.c debug.c
@@ -120,7 +121,7 @@ endif
     OUR_PREPROC += -D__BSD_VISIBLE -DIPFIREWALL_DEFAULT_TO_ACCEPT
     OUR_PREPROC += -D__LITTLE_ENDIAN -DSYSCTL_NODE -DEMULATE_SYSCTL
 
-ifeq ($(TCC),)	# Microsoft C compiler
+  ifeq ($(TCC),)	# Microsoft C compiler
     CC = $(DDK)/bin/x86/x86/cl.exe
     LD = $(DDK)/bin/x86/x86/link.exe
     # #complier options
@@ -158,7 +159,7 @@ ifeq ($(TCC),)	# Microsoft C compiler
     LIBS += $(DDK)/lib/wxp/i386/wmilib.lib
     LIBS += $(DDK)/lib/wxp/i386/ndis.lib
     LIBS += $(DDK)/lib/wxp/i386/sehupd.lib
-else	# use tcc. not working yet for the kernel module.
+  else	# use tcc. not working yet for the kernel module.
     # TCC points to the root of tcc tree
     CC=$(TCC)/bin/wintcc
     EXTRA_CFLAGS += -DTCC -I..
@@ -168,7 +169,7 @@ else	# use tcc. not working yet for the kernel module.
     CFLAGS += -include winmissing.h -include missing.h -include ../glue.h
     CFLAGS += -I../../inc/api -I../../inc/ddk -I../../inc/crt
     CFLAGS += -DRC_INVOKED
-endif # use tcc
+  endif # use tcc
 
     #empty include directory to be built
     M ?= $(shell pwd)
@@ -197,13 +198,12 @@ else # } { linux variables and targets
         grep LINUX_VERSION_CODE $(KERNELPATH)/include/$${G}/linux/version.h | \
         awk '{printf "%03x%02x", $$3/256, $$3%256} ')
 
-  #     awk '{printf "%d %03x%02d", $$3, $$3/256, $$3%256} ')
-  # $(warning version $(LINUX_VERSION_CODE))
-  $(warning ------------- linux 2.6 and newer $(LIN_VER) ------------)
+  $(warning ------------- linux version $(LIN_VER) (hex) ------------)
 # We have three sections: OpenWrt, Linux 2.4 and Linux 2.6
 
 ifeq ($(LIN_VER),openwrt)	#--- { The Makefile section for openwrt ---
- $(error ------ build on openwrt ---------- )
+  # this was used on openwrt, but not anymore
+  $(error ------ build on openwrt ---------- )
   # We do not include a dependency on include_e as it is called
   # by Makefile.openwrt in Build/Prepare
   M=.
@@ -264,11 +264,11 @@ else # --- } {  linux 2.6 and newer
 
   # This is the Makefile section for Linux 2.6.x including planetlab
 
-ifeq ($(IPFW_PLANETLAB),1)
-  $(warning "---- Building for PlanetLab")
-  ipfw-cflags += -DIPFW_PLANETLAB        # PlanetLab compilation
-endif
-#  $(warning "---- Building Version 2.6 $(VER) in $(KERNELPATH)")
+  ifeq ($(IPFW_PLANETLAB),1)
+    $(warning "---- Building for PlanetLab")
+    ipfw-cflags += -DIPFW_PLANETLAB        # PlanetLab compilation
+  endif
+
   WARN := -O1 -Wall -Werror -DDEBUG_SPINLOCK -DDEBUG_MUTEXES
   # The main target
 
@@ -281,7 +281,7 @@ endif
   endif
 
   # Required by kernel < 2.6.23, ccflags-y is used on newer version
-  ifeq ($(shell if [ "$(LIN_VER)" \< "20617" ] ; then echo "true"; fi),true)
+  ifeq ($(shell [ "$(LIN_VER)" \< "20617" ] && echo "true"),true)
     EXTRA_CFLAGS += $(ccflags-y)
   endif
 
@@ -292,6 +292,7 @@ endif
 
   #--- openwrt ?
   ifeq ($(_VER),openwrt)
+    $(warning ----------------------- compiling for openwrt -----)
     M=.
     obj-y := $(IPFW_SRCS:%.c=%.o)
     O_TARGET := $(obj-m)

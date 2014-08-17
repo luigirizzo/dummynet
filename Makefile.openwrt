@@ -1,5 +1,5 @@
 # Makefile to build the package in openwrt.
-# goes into package/ipfw3/Makefile
+# goes into package/network/utils/ipfw3/Makefile
 #
 # Edit IPFW_DIR to point to the directory with the sources for ipfw
 
@@ -17,19 +17,18 @@ MV ?= mv
 include $(INCLUDE_DIR)/package.mk
 
 #Stuff depending on kernel version
-ifeq ($(KERNEL),2.6)
+$(warning -------- -kernel version $(KERNEL) -------)
 
-VERS:=2.6
-IPFW_MOD:=ipfw_mod.ko
-IPFW_SRC_DIR:=M
 
+ifeq ($(KERNEL),2.4)
+    VERS:=openwrt
+    CFLAGS_WRT:=-DSYSCTL_NODE -DEMULATE_SYSCTL
+    IPFW_MOD:=ipfw_mod.o
+    IPFW_SRC_DIR:=SUBDIRS
 else
-
-VERS:=openwrt
-CFLAGS_WRT:=-DSYSCTL_NODE -DEMULATE_SYSCTL
-IPFW_MOD:=ipfw_mod.o
-IPFW_SRC_DIR:=SUBDIRS
-
+    VERS:=2.6
+    IPFW_MOD:=ipfw_mod.ko
+    IPFW_SRC_DIR:=M
 endif
 
 # Description for the package.
@@ -64,6 +63,11 @@ define Build/Prepare
 endef
 
 define Build/Compile
+	# compile the userland part for openwrt
+	$(MAKE) -C $(PKG_BUILD_DIR)/ipfw \
+		$(TARGET_CONFIGURE_OPTS) \
+		CFLAGS="$(TARGET_CFLAGS) $(CFLAGS_WRT) -I./include_e -I./include -include ../glue.h -DNO_ALTQ -D__BSD_VISIBLE" \
+		VER=$(VERS) all
 	# compile the kernel part for openwrt
 	$(MAKE) -C "$(LINUX_DIR)" \
 		CROSS_COMPILE="$(TARGET_CROSS)" \
@@ -71,11 +75,11 @@ define Build/Compile
 		$(IPFW_SRC_DIR)="$(PKG_BUILD_DIR)/kipfw" \
 		IPFW3_ROOT="$(PKG_BUILD_DIR)" \
 		_VER=$(VERS) modules
-	# compile the userland part for openwrt
-	$(MAKE) -C $(PKG_BUILD_DIR)/ipfw \
-		$(TARGET_CONFIGURE_OPTS) \
-		CFLAGS="$(TARGET_CFLAGS) $(CFLAGS_WRT) -I./include_e -I./include -include ../glue.h -DNO_ALTQ -D__BSD_VISIBLE" \
-		_VER=$(VERS) all
+endef
+
+define Build/Compile_new
+	$(call Build/Compile/Default)
+	$(call Build/Compile/Default,modules)
 endef
 
 define Package/ipfw3-userland
