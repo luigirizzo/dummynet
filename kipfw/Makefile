@@ -292,7 +292,7 @@ else # --- } {  linux 2.6 and newer
   # $(warning make is $(MAKE) version is $(shell $(MAKE) -version | head -1) )
 
   #--- openwrt ?
-  ifeq ($(_VER),openwrt)
+  ifeq ($(_VER),xx-openwrt)
     $(warning ----------------------- compiling for openwrt -----)
     M=.
     obj-y := $(IPFW_SRCS:%.c=%.o)

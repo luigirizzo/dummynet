@@ -19,14 +19,13 @@ include $(INCLUDE_DIR)/package.mk
 #Stuff depending on kernel version
 $(warning --- openwrt kernel version $(KERNEL) linux dir $(LINUX_DIR) -------)
 
-
 ifeq ($(KERNEL),2.4)
     VERS:=openwrt
     CFLAGS_WRT:=-DSYSCTL_NODE -DEMULATE_SYSCTL
     IPFW_MOD:=ipfw_mod.o
     IPFW_SRC_DIR:=SUBDIRS
 else
-    VERS:=2.6
+    #VERS:=2.6
     IPFW_MOD:=ipfw_mod.ko
     IPFW_SRC_DIR:=M
 endif
@@ -40,7 +39,7 @@ define KernelPackage/ipfw3
  TITLE:= IPFW and dummynet
  # FILES is what makes up the module, both kernel and userland
  # It must be in the KernelPackage section
- FILES := $(PKG_BUILD_DIR)/kipfw/$(IPFW_MOD) $(PKG_BUILD_DIR)/ipfw/ipfw
+ FILES := $(PKG_BUILD_DIR)/kipfw-mod/$(IPFW_MOD) $(PKG_BUILD_DIR)/ipfw/ipfw
  # AUTOLOAD:=$(call AutoLoad,80,ipfw_mod)
 endef
 
@@ -58,13 +57,18 @@ define Build/Prepare
   # $(warning Preparing ipfw sources)
 	mkdir -p $(PKG_BUILD_DIR)
 	$(CP) -Rp $(IPFW_DIR)/* $(PKG_BUILD_DIR)/
+	# The kernel sources are spread in multiple places,
+	# so we put everything in kipfw-mod
+	mkdir -p $(PKG_BUILD_DIR)/kipfw-mod
+	cp -Rp $(IPFW_DIR)/kipfw/* $(PKG_BUILD_DIR)/kipfw-mod
+	cp `find $(IPFW_DIR)/sys -name \*.c` $(PKG_BUILD_DIR)/kipfw-mod
 	# we do not need cross parameters
 	(cd $(PKG_BUILD_DIR)/ipfw && $(MAKE) include_e )
-	(cd $(PKG_BUILD_DIR)/kipfw && $(MAKE) include_e )
+	(cd $(PKG_BUILD_DIR)/kipfw-mod && $(MAKE) include_e )
 endef
 
 define Build/Compile
-	$(warning  compile the userland part for ipfw/openwrt)
+	# XXX check whether we need all linux_dir etc.
 	$(MAKE) -C $(PKG_BUILD_DIR)/ipfw \
 		LINUX_DIR=$(LINUX_DIR) \
 		$(TARGET_CONFIGURE_OPTS) \
@@ -77,7 +81,7 @@ define Build/Compile
 		LINUX_DIR=$(LINUX_DIR) \
 		KERNELPATH=$(LINUX_DIR) \
 		ARCH="$(LINUX_KARCH)" \
-		$(IPFW_SRC_DIR)="$(PKG_BUILD_DIR)/kipfw" \
+		$(IPFW_SRC_DIR)="$(PKG_BUILD_DIR)/kipfw-mod" \
 		IPFW3_ROOT="$(PKG_BUILD_DIR)" \
 		_VER=$(VERS) modules
 endef
