@@ -34,7 +34,8 @@
 # examples found in the $(DDK)/src/network/ndis/passthru/driver/
 # They can be re-created using the 'ndis-glue' target in the 
 
-include $(PWD)/../Makefile.inc
+IPFW3_ROOT ?= $(PWD)/..
+include $(IPFW3_ROOT)/Makefile.inc
 
 TARGET = kipfw
 
@@ -69,6 +70,8 @@ ipfw-cflags += -I $(M)/include_e
 ipfw-cflags += -I $(M)/../sys
 ipfw-cflags += -include $(M)/../glue.h	# headers
 ipfw-cflags += -include $(M)/missing.h	# headers
+
+$(warning ------ arch $(OSARCH) goals $(MAKECMDGOALS) -----------)
 
 ifeq ($(OSARCH),Windows)	#--- {  Windows block
 ifeq ($(VER),win64)
@@ -186,9 +189,21 @@ $(TARGET): include_e
 
 else # } { linux variables and targets
 
+  # extract version number (hex, aXXYY). Newer linuxes have a different dir
+  # if not set, use the version from the installed system
+  KERNELPATH ?= $(KSRC)
+  LIN_VER := $(shell V=linux/version.h; G=. ; \
+        [ -f $(KERNELPATH)/include/$${V} ] || G=generated/uapi ;\
+        grep LINUX_VERSION_CODE $(KERNELPATH)/include/$${G}/linux/version.h | \
+        awk '{printf "%03x%02x", $$3/256, $$3%256} ')
+
+  #     awk '{printf "%d %03x%02d", $$3, $$3/256, $$3%256} ')
+  # $(warning version $(LINUX_VERSION_CODE))
+  $(warning ------------- linux 2.6 and newer $(LIN_VER) ------------)
 # We have three sections: OpenWrt, Linux 2.4 and Linux 2.6
 
-ifeq ($(VER),openwrt)	#--- { The Makefile section for openwrt ---
+ifeq ($(LIN_VER),openwrt)	#--- { The Makefile section for openwrt ---
+ $(error ------ build on openwrt ---------- )
   # We do not include a dependency on include_e as it is called
   # by Makefile.openwrt in Build/Prepare
   M=.
@@ -207,7 +222,7 @@ ifeq ($(VER),openwrt)	#--- { The Makefile section for openwrt ---
 endif # ---- } end openwrt version
 
 
-ifneq ($(shell echo $(VER)|grep '2.4'),)	#--- {
+ifneq ($(shell echo $(LIN_VER)|grep '2.4'),)	#--- {
   # Makefile section for the linux 2.4 version
   # tested on linux-2.4.35.4, does not work with 2.4.37
   #
@@ -245,6 +260,7 @@ ifneq ($(shell echo $(VER)|grep '2.4'),)	#--- {
 all: mod24
 
 else # --- } {  linux 2.6 and newer
+  $(warning --- build 2.6 and newer target $(TARGET) ----)
 
   # This is the Makefile section for Linux 2.6.x including planetlab
 
@@ -252,8 +268,6 @@ ifeq ($(IPFW_PLANETLAB),1)
   $(warning "---- Building for PlanetLab")
   ipfw-cflags += -DIPFW_PLANETLAB        # PlanetLab compilation
 endif
-  # if not set, use the version from the installed system
-  KERNELPATH ?= $(KSRC)
 #  $(warning "---- Building Version 2.6 $(VER) in $(KERNELPATH)")
   WARN := -O1 -Wall -Werror -DDEBUG_SPINLOCK -DDEBUG_MUTEXES
   # The main target
@@ -261,32 +275,39 @@ endif
   # Required by GCC 4.6
   ccflags-y += -Wno-unused-but-set-variable
 
-  # extract version number (decimal). Newer linuxes have a different dir
-  LINUX_VERSION_CODE := $(shell V=linux/version.h; G=. ; \
-        [ -f $(KERNELPATH)/include/$${V} ] || G=generated/uapi ;\
-        grep LINUX_VERSION_CODE $(KERNELPATH)/include/$${G}/linux/version.h | \
-        awk '{printf "%d", $$3} ')
 
-  #     awk '{printf "%d %03x%02d", $$3, $$3/256, $$3%256} ')
-  # $(warning version $(LINUX_VERSION_CODE))
-
-  ifeq ($(shell if [ -z $(LINUX_VERSION_CODE) ] ; then echo "true"; fi),true)
+  ifeq ($(shell if [ -z $(LIN_VER) ] ; then echo "true"; fi),true)
     $(warning "---- Perhaps you miss a (cd $(KERNELPATH); make oldconfig; make prepare; make scripts)");
   endif
 
-  # Required by kernel <= 2.6.22, ccflags-y is used on newer version
-  ifeq ($(shell if [ "$(LINUX_VERSION_CODE)" -le 132630 ] ; then echo "true"; fi),true)
+  # Required by kernel < 2.6.23, ccflags-y is used on newer version
+  ifeq ($(shell if [ "$(LIN_VER)" \< "20617" ] ; then echo "true"; fi),true)
     EXTRA_CFLAGS += $(ccflags-y)
   endif
 
-  $(warning $(shell [ "$(LINUX_VERSION_CODE)" -le 132635 ] && \
+  $(warning $(shell [ "$(LIN_VER)" \< "2061c" ] && \
 	[ `$(MAKE) -version | head -1 | cut -d " " -f 3` != '3.81' ] && \
 	echo "****   need make 3.81 *****") )
   # $(warning make is $(MAKE) version is $(shell $(MAKE) -version | head -1) )
 
+  #--- openwrt ?
+  ifeq ($(_VER),openwrt)
+    M=.
+    obj-y := $(IPFW_SRCS:%.c=%.o)
+    O_TARGET := $(obj-m)
+
+    # xcflags-y is a temporary variable where we store build options
+    xcflags-y += -O1
+    xcflags-y += -g
+
+    EXTRA_CFLAGS := $(xcflags-y) $(ipfw-cflags) -DSYSCTL_NODE -DEMULATE_SYSCTL
+  endif #---- end openwrt
+
 all: $(TARGET)
 $(TARGET):	include_e
+	echo "xxxxxxxxxxxxx $(MAKE) -C $(KERNELPATH) V=$(V) M=`pwd` modules"
 	$(MAKE) -C $(KERNELPATH) V=$(V) M=`pwd` modules
+
 
 endif # } --- linux 2.6 and newer
 

@@ -3,7 +3,7 @@
 #
 # Edit IPFW_DIR to point to the directory with the sources for ipfw
 
-IPFW_DIR := $(TOPDIR)/../ipfw3
+IPFW_DIR := $(TOPDIR)/../qemu-misc/ipfw3
 
 include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
@@ -41,7 +41,7 @@ define KernelPackage/ipfw3
  TITLE:= IPFW and dummynet
  # FILES is what makes up the module, both kernel and userland
  # It must be in the KernelPackage section
- FILES := $(PKG_BUILD_DIR)/dummynet2/$(IPFW_MOD) $(PKG_BUILD_DIR)/ipfw/ipfw
+ FILES := $(PKG_BUILD_DIR)/kipfw/$(IPFW_MOD) $(PKG_BUILD_DIR)/ipfw/ipfw
  # AUTOLOAD:=$(call AutoLoad,80,ipfw_mod)
 endef
 
@@ -60,7 +60,7 @@ define Build/Prepare
 	mkdir -p $(PKG_BUILD_DIR)
 	$(CP) -Rp $(IPFW_DIR)/* $(PKG_BUILD_DIR)/
 	(cd $(PKG_BUILD_DIR)/ipfw && $(MAKE) include_e )
-	(cd $(PKG_BUILD_DIR)/dummynet2 && $(MAKE) include_e )
+	(cd $(PKG_BUILD_DIR)/kipfw && $(MAKE) include_e )
 endef
 
 define Build/Compile
@@ -68,13 +68,14 @@ define Build/Compile
 	$(MAKE) -C "$(LINUX_DIR)" \
 		CROSS_COMPILE="$(TARGET_CROSS)" \
 		ARCH="$(LINUX_KARCH)" \
-		$(IPFW_SRC_DIR)="$(PKG_BUILD_DIR)/dummynet2" \
-		VER=$(VERS) modules
+		$(IPFW_SRC_DIR)="$(PKG_BUILD_DIR)/kipfw" \
+		IPFW3_ROOT="$(PKG_BUILD_DIR)" \
+		_VER=$(VERS) modules
 	# compile the userland part for openwrt
 	$(MAKE) -C $(PKG_BUILD_DIR)/ipfw \
 		$(TARGET_CONFIGURE_OPTS) \
 		CFLAGS="$(TARGET_CFLAGS) $(CFLAGS_WRT) -I./include_e -I./include -include ../glue.h -DNO_ALTQ -D__BSD_VISIBLE" \
-		VER=$(VERS) all
+		_VER=$(VERS) all
 endef
 
 define Package/ipfw3-userland
