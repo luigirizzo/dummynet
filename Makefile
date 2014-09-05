@@ -73,6 +73,7 @@ win64:
 ndis-glue:
 	-@mkdir -p kipfw-mod
 	cp $(DDK)/src/network/ndis/passthru/driver/*.[ch] kipfw-mod
+	(cd kipfw-mod; for i in  `find . -type f`; do sed -i.tmp "s/$$(printf '\r')//g" $$i; done )
 	cat kipfw/win-passthru.diff | sed "s/$$(printf '\r')//g" | (cd kipfw-mod; patch )
 
 kipfw-src:
