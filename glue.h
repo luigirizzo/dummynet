@@ -51,8 +51,10 @@
 
 #ifndef KERNEL_MODULE	/* Userland headers */
 
-#if defined(__CYGWIN32__) && !defined(_WIN32)                                   
+#if defined(__CYGWIN32__) || defined(__CYGWIN__)
+#if !defined(_WIN32)                                   
 #define _WIN32                                                                  
+#endif                                                                          
 #endif                                                                          
 
 #if defined(TCC) && defined(_WIN32)
@@ -245,7 +247,7 @@ enum ipfw_msg_type {
 /* on freebsd sys/socket.h pf specific */
 #define NET_RT_IFLIST	3               /* survey interface list */
 
-#if defined(__linux__) || defined(__CYGWIN32__)
+#if defined(__linux__) || defined(__CYGWIN32__) || defined(__CYGWIN__)
 /* on freebsd net/if.h XXX used */
 struct if_data {
 	/* ... */
@@ -467,6 +469,7 @@ struct ether_addr * ether_aton(const char *a);
 
 struct hostent* gethostbyname2(const char *name, int af);
 
+#define strcasecmp strcmp // windows XXX ip_dummynet.c
 
 /********************
 * windows wrappings *
