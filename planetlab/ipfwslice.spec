@@ -1,23 +1,22 @@
 #
-# $Id: ipfwslice.spec 16174 2009-12-15 13:38:15Z marta $
-#
 # TODO:
 # restart crond
 # modprobe ipfw_mod.ko (depmod ?)
 #
-%define url $URL: svn+ssh://onelab2/home/svn/ports-luigi/ipfw3-2012/planetlab/ipfwslice.spec $
 
 # Marta Carbone <marta.carbone@iet.unipi.it>
 # 2009 - Universita` di Pisa
 # License is BSD.
 
+# the 2012 release was pulled from http://info.iet.unipi.it/~marta/dummynet/ipfw3-20120610.tar.gz
+# seel also          http://sourceforge.net/p/dummynet/code
+# in 2013 Marta has moved to sourceforge at
+# git clone git://git.code.sf.net/p/dummynet/code your read-only code
 %define name ipfwslice
-%define version 0.9
-%define taglevel 11
+%define version 3
+%define taglevel 1
 
-%define release %{kernel_version}.%{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
-%define kernel_id_arch %{kernel_version}-%{kernel_release}-%{kernel_arch}
-%define kernel_id %{kernel_version}-%{kernel_release}
+%define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 
 Summary: ipfw and dummynet for Linux
 Name: %{name}
@@ -31,7 +30,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
 Vendor: unipi
 Packager: PlanetLab <marta@onelab2.iet.unipi.it>
 Distribution: PlanetLab %{plrelease}
-URL: %(echo %{url} | cut -d ' ' -f 2)
+URL: %{SCMURL}
 
 %description
 the frontend part of the ipfw planetlab package
@@ -56,6 +55,42 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man8/ipfw.8*
 
 %changelog
+* Mon Jul 09 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - ipfw-20120610-2
+- cosmetic changes only in specfile
+
+* Fri Jun 15 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - ipfw-20120610-1
+- integrated ipfw3 as of 20120610 from upstream
+
+* Mon Oct 24 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - ipfw-0.9-23
+- for building against k32 on f8
+
+* Sun Oct 02 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - ipfw-0.9-22
+- rpm version number has the kernel taglevel embedded
+
+* Fri Jun 10 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - ipfw-0.9-21
+- build tweaks for gcc-4.6 on f15
+
+* Sun Jan 23 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - ipfw-0.9-20
+- tweaks for compiling on k32/64 bits
+
+* Wed Dec 08 2010 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - ipfw-0.9-19
+- fix detection of kernel conventions
+
+* Tue Dec 07 2010 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - ipfw-0.9-18
+- guess conventions for either <=k27 or >=k32
+
+* Tue Jun 15 2010 Baris Metin <Talip-Baris.Metin@sophia.inria.fr> - ipfw-0.9-17
+- testing git only module-tag
+
+* Tue Jun 15 2010 Baris Metin <Talip-Baris.Metin@sophia.inria.fr> - ipfw-0.9-16
+- tagging ipfw to test module-tools on (pure) git
+
+* Wed May 12 2010 Talip Baris Metin <Talip-Baris.Metin@sophia.inria.fr> - ipfw-0.9-15
+- tagging for obsoletes
+
+* Tue Apr 27 2010 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - ipfw-0.9-13
+- Update to the ipfw3 version of the dummynet code.
+
 * Mon Apr 12 2010 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - ipfw-0.9-11
 - add ipfw initialization script to chkconfig
 

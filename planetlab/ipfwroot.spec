@@ -1,26 +1,54 @@
 #
-# $Id: ipfwroot.spec 16174 2009-12-15 13:38:15Z marta $
-#
-# TODO:
-# restart crond
-#
-%define url $URL: svn+ssh://onelab2/home/svn/ports-luigi/ipfw3-2012/planetlab/ipfwroot.spec $
-
 # Marta Carbone <marta.carbone@iet.unipi.it>
 # 2009 - Universita` di Pisa
 # License is BSD.
 
 # kernel_release, kernel_version and kernel_arch are expected to be set by the build to e.g.
-# kernel_release : vs2.3.0.29.1.planetlab
-# kernel_version : 2.6.22.14
+# kernel_release : 24.onelab  (24 is then the planetlab taglevel)
+# kernel_version : 2.6.27.57 | 2.6.32  (57 in the 27 case is the patch level)
+# kernel_arch :    i686 | x86_64
 
+# the 2012 release was pulled from http://info.iet.unipi.it/~marta/dummynet/ipfw3-20120610.tar.gz
+# seel also          http://sourceforge.net/p/dummynet/code
+# in 2013 Marta has moved to sourceforge at
+# git clone git://git.code.sf.net/p/dummynet/code your read-only code
 %define name ipfwroot
-%define version 0.9
-%define taglevel 11
+%define version 3
+%define taglevel 1
 
-%define release %{kernel_version}.%{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
-%define kernel_id_arch %{kernel_version}-%{kernel_release}-%{kernel_arch}
-%define kernel_id %{kernel_version}-%{kernel_release}
+# when no planetlab kernel is being built, kernel_version is defined but empty
+%define _with_planetlab_kernel %{?kernel_version:1}%{!?kernel_version:0}
+# we need to make sure that this rpm gets upgraded when the kernel release changes
+%if %{_with_planetlab_kernel}
+# with the planetlab kernel
+%define pl_kernel_taglevel %( echo %{kernel_release} | cut -d. -f1 )
+%define ipfw_release %{kernel_version}.%{pl_kernel_taglevel}
+%else
+# with the stock kernel
+# this line below
+#%define ipfw_release %( rpm -q --qf "%{version}" kernel-headers )
+# causes recursive macro definition no matter how much you quote
+%define percent %
+%define braop \{
+%define bracl \}
+%define kernel_version %( rpm -q --qf %{percent}%{braop}version%{bracl} kernel-headers )
+%define kernel_release %( rpm -q --qf %{percent}%{braop}release%{bracl} kernel-headers )
+%define kernel_arch %( rpm -q --qf %{percent}%{braop}arch%{bracl} kernel-headers )
+%define ipfw_release %{kernel_version}.%{kernel_release}
+%endif
+
+%define release %{ipfw_release}.%{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
+
+# guess which convention is used; k27 and before used dash, k32 uses dot
+%define kernelpath_dash /usr/src/kernels/%{kernel_version}-%{kernel_release}-%{kernel_arch}
+%define kernelpath_dot /usr/src/kernels/%{kernel_version}-%{kernel_release}.%{kernel_arch}
+%define kernelpath %( [ -d %{kernelpath_dot} ] && echo %{kernelpath_dot} || echo %{kernelpath_dash} )
+
+# the k32 kernel currently builds e.g. /lib/modules/2.6.32-0.onelab.2010.12.07-i686
+# the k27 and before does not have the -i686 part
+%define kernel_id_old %{kernel_version}-%{kernel_release}
+%define kernel_id_new %{kernel_version}-%{kernel_release}.%{kernel_arch}
+%define kernel_id %( [ -d %{kernelpath_dot} ] && echo %{kernel_id_new} || echo %{kernel_id_old} )
 
 Summary: ipfw and dummynet for Linux
 Name: %{name}
@@ -30,14 +58,16 @@ License: BSD
 Group: System Environment/Kernel
 Source0: %{name}-%{version}.tar.bz2
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
+Requires: kernel = %{kernel_version}-%{kernel_release}
 Requires: vixie-cron
 Requires: vsys-scripts
+Obsoletes: ipfw
 
 Vendor: unipi
 Packager: PlanetLab <marta@onelab2.iet.unipi.it>
 # XXX ask 
 Distribution: PlanetLab %{plrelease}
-URL: %(echo %{url} | cut -d ' ' -f 2)
+URL: %{SCMURL}
 
 %description
 ipfw is the Linux port of the FreeBSD ipfw and dummynet packages
@@ -48,9 +78,6 @@ ipfw is the Linux port of the FreeBSD ipfw and dummynet packages
 %build
 # clean the rpm build directory
 rm -rf $RPM_BUILD_ROOT
-
-# with the new build, we use the kernel-devel rpm for building
-%define kernelpath /usr/src/kernels/%{kernel_id_arch}
 
 %__make KERNELPATH=%kernelpath clean
 %__make KERNELPATH=%kernelpath IPFW_PLANETLAB=1
@@ -68,7 +95,7 @@ rm -rf $RPM_BUILD_ROOT
 ### this script is also triggered while the node image is being created at build-time
 # some parts of the script do not make sense in this context
 # this is why the build exports PL_BOOTCD=1 in such cases
-depmod -a
+depmod -a %{kernel_id}
 /sbin/chkconfig --add ipfw
 # start the service if not building
 [ -z "$PL_BOOTCD" ] && service ipfw start
@@ -87,6 +114,42 @@ depmod -a
 /etc/rc.d/init.d/ipfw
 
 %changelog
+* Mon Jul 09 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - ipfw-20120610-2
+- cosmetic changes only in specfile
+
+* Fri Jun 15 2012 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - ipfw-20120610-1
+- integrated ipfw3 as of 20120610 from upstream
+
+* Mon Oct 24 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - ipfw-0.9-23
+- for building against k32 on f8
+
+* Sun Oct 02 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - ipfw-0.9-22
+- rpm version number has the kernel taglevel embedded
+
+* Fri Jun 10 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - ipfw-0.9-21
+- build tweaks for gcc-4.6 on f15
+
+* Sun Jan 23 2011 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - ipfw-0.9-20
+- tweaks for compiling on k32/64 bits
+
+* Wed Dec 08 2010 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - ipfw-0.9-19
+- fix detection of kernel conventions
+
+* Tue Dec 07 2010 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - ipfw-0.9-18
+- guess conventions for either <=k27 or >=k32
+
+* Tue Jun 15 2010 Baris Metin <Talip-Baris.Metin@sophia.inria.fr> - ipfw-0.9-17
+- testing git only module-tag
+
+* Tue Jun 15 2010 Baris Metin <Talip-Baris.Metin@sophia.inria.fr> - ipfw-0.9-16
+- tagging ipfw to test module-tools on (pure) git
+
+* Wed May 12 2010 Talip Baris Metin <Talip-Baris.Metin@sophia.inria.fr> - ipfw-0.9-15
+- tagging for obsoletes
+
+* Tue Apr 27 2010 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - ipfw-0.9-13
+- Update to the ipfw3 version of the dummynet code.
+
 * Mon Apr 12 2010 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - ipfw-0.9-11
 - add ipfw initialization script to chkconfig
 
