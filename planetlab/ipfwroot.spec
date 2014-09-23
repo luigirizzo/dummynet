@@ -83,7 +83,7 @@ rm -rf $RPM_BUILD_ROOT
 %__make KERNELPATH=%kernelpath IPFW_PLANETLAB=1
 
 %install
-install -D -m 755 dummynet2/ipfw_mod.ko $RPM_BUILD_ROOT/lib/modules/%{kernel_id}/net/netfilter/ipfw_mod.ko
+install -D -m 755 kipfw-mod/ipfw_mod.ko $RPM_BUILD_ROOT/lib/modules/%{kernel_id}/net/netfilter/ipfw_mod.ko
 install -D -m 755 ipfw/ipfw $RPM_BUILD_ROOT/sbin/ipfw
 install -D -m 644 planetlab/ipfw.cron $RPM_BUILD_ROOT/%{_sysconfdir}/cron.d/ipfw.cron
 install -D -m 755 planetlab/ipfw $RPM_BUILD_ROOT/etc/rc.d/init.d/ipfw
