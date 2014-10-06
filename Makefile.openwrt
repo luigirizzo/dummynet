@@ -96,6 +96,7 @@ define Package/ipfw3-userland
   CATEGORY:=Utilities
   TITLE := /sbin/ipfw
   DESCRIPTION := This is the control program for ipfw and dummynet
+  DEPENDS := +libc +libgcc
 endef
 
 define Package/ipfw3-userland/install
