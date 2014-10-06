@@ -87,8 +87,6 @@ OBJS += expand_number.o humanize_number.o glue.o
 CFLAGS += -DNO_ALTQ
 #OBJS += altq.o
 
-all: $(TARGET)
-	-@echo "Done build for $(OSARCH)"
 
 $(TARGET): $(OBJS)
 	$(MSG) "   LD  $@"
