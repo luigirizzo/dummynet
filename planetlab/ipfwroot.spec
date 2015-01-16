@@ -59,7 +59,8 @@ Group: System Environment/Kernel
 Source0: %{name}-%{version}.tar.bz2
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
 Requires: kernel = %{kernel_version}-%{kernel_release}
-Requires: vixie-cron
+# in fedora20 cronie does not provide vixie-cronie anymore, just cronie
+Requires: cronie
 Requires: vsys-scripts
 Obsoletes: ipfw
 
