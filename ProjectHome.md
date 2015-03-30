@@ -1,0 +1,2 @@
+Dummynet is a live network emulator which can reproduce bandwidth limitations, delays, losses. It includes a number of packet schedulers, and a flexible firewall (ipfw) used as a traffic classifier.
+The code is mainly living in the FreeBSD source tree, but the version here includes additional code to run on Linux and Windows. Unless otherwise specified, the code is BSD licensed.
