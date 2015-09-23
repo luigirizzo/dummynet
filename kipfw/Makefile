@@ -223,7 +223,7 @@ ifeq ($(LIN_VER),openwrt)	#--- { The Makefile section for openwrt ---
 endif # ---- } end openwrt version
 
 
-ifneq ($(shell echo $(LIN_VER)|grep '2.4'),)	#--- {
+ifneq ($(shell echo $(LIN_VER)|grep '^204'),)	#--- {
   # Makefile section for the linux 2.4 version
   # tested on linux-2.4.35.4, does not work with 2.4.37
   #
