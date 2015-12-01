@@ -556,7 +556,11 @@ ipfw2_queue_handler(QH_ARGS)
 	m->m_skb = skb;
 	m->m_len = skb->len;		/* len from ip header to end */
 	m->m_pkthdr.len = skb->len;	/* total packet len */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0)
 	m->m_pkthdr.rcvif = info->indev;
+#else
+	m->m_pkthdr.rcvif = info->state.in;
+#endif
 	m->queue_entry = info;
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,22)	/* XXX was 2.6.0 */
 	m->m_data = (char *)skb->nh.iph;
@@ -565,11 +569,19 @@ ipfw2_queue_handler(QH_ARGS)
 #endif
 
 	/* XXX add the interface */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0)
 	if (info->hook == IPFW_HOOK_IN) {
 		ret = ipfw_check_hook(NULL, &m, info->indev, PFIL_IN, NULL);
 	} else {
 		ret = ipfw_check_hook(NULL, &m, info->outdev, PFIL_OUT, NULL);
 	}
+#else
+	if (info->state.hook == IPFW_HOOK_IN) {
+		ret = ipfw_check_hook(NULL, &m, info->state.in, PFIL_IN, NULL);
+	} else {
+		ret = ipfw_check_hook(NULL, &m, info->state.out, PFIL_OUT, NULL);
+	}
+#endif
 
 	if (m != NULL) {	/* Accept. reinject and free the mbuf */
 		REINJECT(info, NF_ACCEPT);
