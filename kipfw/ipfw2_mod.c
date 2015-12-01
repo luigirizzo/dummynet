@@ -478,10 +478,19 @@ call_ipfw(
 #else
 	struct sk_buff  *skb,
 #endif
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0)
 	const struct net_device *in, const struct net_device *out,
 	int (*okfn)(struct sk_buff *))
+#else
+	const struct nf_hook_state *state)
+#endif
 {
-	(void)hooknum; (void)skb; (void)in; (void)out; (void)okfn; /* UNUSED */
+	(void)hooknum; (void)skb; /* UNUSED */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0)
+	(void)in; (void)out; (void)okfn; /* UNUSED */
+#else
+	(void)state; /* UNUSED */
+#endif
 	return NF_QUEUE;
 }
 
