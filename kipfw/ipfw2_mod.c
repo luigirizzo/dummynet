@@ -467,16 +467,16 @@ static struct nf_sockopt_ops ipfw_sockopts = {
  */
 static unsigned int
 call_ipfw(
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0)
-	unsigned int hooknum,
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0) && !defined(RHEL7_NF_BACKPORT)
+       unsigned int hooknum,
 #else
-	const struct nf_hook_ops *hooknum,
+       const struct nf_hook_ops *hooknum,
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,23) // in 2.6.22 we have **
-	struct sk_buff  **skb,
+       struct sk_buff  **skb,
 #else
-	struct sk_buff  *skb,
+       struct sk_buff  *skb,
 #endif
 	const struct net_device *in, const struct net_device *out,
 	int (*okfn)(struct sk_buff *))
