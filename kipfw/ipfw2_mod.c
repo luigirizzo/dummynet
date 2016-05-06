@@ -565,7 +565,7 @@ ipfw2_queue_handler(QH_ARGS)
 	m->m_skb = skb;
 	m->m_len = skb->len;		/* len from ip header to end */
 	m->m_pkthdr.len = skb->len;	/* total packet len */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,32)
 	m->m_pkthdr.rcvif = info->indev;
 #else
 	m->m_pkthdr.rcvif = info->state.in;
@@ -578,7 +578,7 @@ ipfw2_queue_handler(QH_ARGS)
 #endif
 
 	/* XXX add the interface */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,32)
 	if (info->hook == IPFW_HOOK_IN) {
 		ret = ipfw_check_hook(NULL, &m, info->indev, PFIL_IN, NULL);
 	} else {
