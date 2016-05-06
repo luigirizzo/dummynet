@@ -467,7 +467,7 @@ static struct nf_sockopt_ops ipfw_sockopts = {
  */
 static unsigned int
 call_ipfw(
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,32,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0)
 	unsigned int hooknum,
 #else
 	const struct nf_hook_ops *hooknum,
@@ -478,7 +478,7 @@ call_ipfw(
 #else
 	struct sk_buff  *skb,
 #endif
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,32,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0)
 	const struct net_device *in, const struct net_device *out,
 	int (*okfn)(struct sk_buff *))
 #else
@@ -486,7 +486,7 @@ call_ipfw(
 #endif
 {
 	(void)hooknum; (void)skb; /* UNUSED */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,32,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0)
 	(void)in; (void)out; (void)okfn; /* UNUSED */
 #else
 	(void)state; /* UNUSED */
