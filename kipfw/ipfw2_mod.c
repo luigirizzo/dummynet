@@ -472,12 +472,6 @@ call_ipfw(
 	const struct net_device *in, const struct net_device *out,
 	const struct nf_hook_state *state)
 {
-	(void)hooknum; (void)skb; /* UNUSED */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0)
-	(void)in; (void)out; (void)okfn; /* UNUSED */
-#else
-	(void)state; /* UNUSED */
-#endif
 	return NF_QUEUE;
 }
 
