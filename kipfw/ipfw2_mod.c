@@ -56,9 +56,17 @@
         __FUNCTION__, ## __VA_ARGS__)
 #endif
 
+/* Parameter used to specify whether we want to reinject delayed packets
+ * into netfilter with the NF_STOP (1) or NF_ACCEPT (0) flag */
+static short int USE_NF_STOP = 1;
+
 #ifdef __linux__
 #include <linux/module.h>
+#include <linux/moduleparam.h>
 #include <linux/kernel.h>
+
+module_param(USE_NF_STOP, short, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+MODULE_PARM_DESC(USE_NF_STOP, "Whether to use NF_STOP (1) or not (0)");
 
 #ifndef CONFIG_NETFILTER
 #error should configure netfilter (broken on 2.6.26 and below ?)
@@ -621,7 +629,7 @@ netisr_dispatch(int num, struct mbuf *m)
 #endif
 
 	/* XXX to obey one-pass, possibly call the queue handler here */
-	REINJECT(info, ((num == -1)?NF_DROP:NF_STOP));	/* accept but no more firewall */
+	REINJECT(info, ((num == -1) ? NF_DROP : (USE_NF_STOP ? NF_STOP : NF_ACCEPT)));
 }
 
 /*
@@ -867,6 +875,9 @@ ipfw_module_init(void)
 #endif
 
 	rn_init(64);
+
+	printf("Loading with USE_NF_STOP = %d\n", USE_NF_STOP);
+
 	my_mod_register("ipfw",  1, moddesc_ipfw, NULL, NULL);
 	my_mod_register("sy_ipfw",  2, NULL,
 		sysinit_ipfw_init, sysuninit_ipfw_destroy);
