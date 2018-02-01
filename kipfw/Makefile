@@ -201,14 +201,6 @@ else # } { linux variables and targets
 
   $(warning ------------- linux version $(LIN_VER) (hex) ------------)
 
-  # RHEL7 kernels have backported kernel stuff from later than 3.10
-  RH_VER := $(shell /bin/grep -o [0-9].[0-9] /etc/redhat-release)
-  RH_MAJVER := $(word 1, $(subst ., ,$(RH_VER)))
-  RH_MINVER := $(word 2, $(subst ., ,$(RH_VER)))
-  ifeq ($(RH_MAJVER),7)
-    EXTRA_CFLAGS += -DRHEL7_NF_BACKPORT
-  endif
-    
 # We have three sections: OpenWrt, Linux 2.4 and Linux 2.6
 
 ifeq ($(LIN_VER),openwrt)	#--- { The Makefile section for openwrt ---
