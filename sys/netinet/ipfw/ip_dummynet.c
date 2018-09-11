@@ -2186,14 +2186,14 @@ ip_dn_init(void)
 {
 	if (dn_cfg.init_done)
 		return;
-	printf("DUMMYNET %p with IPv6 initialized (100409)\n", curvnet);
+	printf("DUMMYNET initialized\n");
 	dn_cfg.init_done = 1;
 	/* Set defaults here. MSVC does not accept initializers,
 	 * and this is also useful for vimages
 	 */
 	/* queue limits */
-	dn_cfg.slot_limit = 100; /* Foot shooting limit for queues. */
-	dn_cfg.byte_limit = 1024 * 1024;
+	dn_cfg.slot_limit = 250; /* Foot shooting limit for queues. */
+	dn_cfg.byte_limit = 1024 * 1024 * 3;
 	dn_cfg.expire = 1;
 
 	/* RED parameters */
