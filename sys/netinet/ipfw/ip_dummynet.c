@@ -1646,7 +1646,6 @@ config_profile(struct dn_profile *pf, struct dn_id *arg)
 static void
 dummynet_flush(void)
 {
-
 	/* delete all schedulers and related links/queues/flowsets */
 	dn_ht_scan(dn_cfg.schedhash, schk_delete_cb,
 		(void *)(uintptr_t)DN_DELETE_FS);
@@ -2166,7 +2165,8 @@ ip_dn_ctl(struct sockopt *sopt)
 			D("argument len %d invalid", l);
 			break;
 		}
-		p = malloc(l, M_TEMP, M_WAITOK); // XXX can it fail ?
+		p = malloc(l, M_DUMMYNET, M_WAITOK | M_ZERO); // XXX can it fail ?
+
 		error = sooptcopyin(sopt, p, l, l);
 		if (error)
 			break ;

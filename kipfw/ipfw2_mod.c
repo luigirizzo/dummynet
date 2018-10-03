@@ -231,7 +231,7 @@ ipfw_ctl_h(struct sockopt *s, int cmd, int dir, int len, void __user *user)
 	memset(&t, 0, sizeof(t));
 	s->sopt_td = &t;
 	
-	//printf("%s called with cmd %d len %d sopt %p user %p\n", __FUNCTION__, cmd, len, s, user);
+	//printf("%s called with cmd %d dir %d len %d sopt %p user %p\n", __FUNCTION__, cmd, dir, len, s, user);
 
 	if (ip_fw_ctl_ptr && cmd != IP_DUMMYNET3 && (cmd == IP_FW3 ||
 	    cmd < IP_DUMMYNET_CONFIGURE))
@@ -379,6 +379,7 @@ do_ipfw_set_ctl(struct sock *sk, int cmd, void __user *user, unsigned int len)
 {
 	struct sockopt s;	/* pass arguments */
 	(void)sk;		/* UNUSED */
+        bzero(&s, sizeof(struct sockopt));
 	return ipfw_ctl_h(&s, cmd, SOPT_SET, len, user);
 }
 
@@ -389,7 +390,9 @@ int
 do_ipfw_get_ctl(struct sock *sk, int cmd, void __user *user, int *len)
 {
 	struct sockopt s;	/* pass arguments */
-	int ret = ipfw_ctl_h(&s, cmd, SOPT_GET, *len, user);
+	int ret;
+        bzero(&s, sizeof(struct sockopt));
+	ret = ipfw_ctl_h(&s, cmd, SOPT_GET, *len, user);
 
 	(void)sk;		/* UNUSED */
 	*len = s.sopt_valsize;	/* return length back to the caller */

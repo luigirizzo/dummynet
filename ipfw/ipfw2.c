@@ -377,6 +377,8 @@ safe_realloc(void *ptr, size_t size)
 int
 do_cmd(int optname, void *optval, uintptr_t optlen)
 {
+	/* printf("do_cmd %d %p %lu\n", optname, optval, optlen); */
+
 	int i;
 
 	if (co.test_only)
