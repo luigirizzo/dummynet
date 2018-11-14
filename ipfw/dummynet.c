@@ -285,8 +285,8 @@ print_extra_delay_parms(struct dn_profile *p)
 
 	loss = p->loss_level;
 	loss /= p->samples_no;
-	printf("\t profile: name \"%s\" loss %f samples %d\n",
-		p->name, loss, p->samples_no);
+	printf("\t profile: name \"%s\" loss %f samples %d loss_level %d\n",
+		p->name, loss, p->samples_no, p->loss_level);
 }
 
 static void

@@ -353,6 +353,7 @@ dn_enqueue(struct dn_queue *q, struct mbuf* m, int drop)
 	uint64_t len;
 
 	if (q->fs == NULL || q->_si == NULL) {
+	        io_pkt_drop++;
 		printf("%s fs %p si %p, dropping\n",
 			__FUNCTION__, q->fs, q->_si);
 		FREE_PKT(m);
@@ -439,10 +440,11 @@ extra_bits(struct mbuf *m, struct dn_schk *s)
 		return 0;
 	index  = random() % pf->samples_no;
 	bits = div64((uint64_t)pf->samples[index] * s->link.bandwidth, 1000);
-	if (index >= pf->loss_level) {
+	if (pf->loss_level && index >= pf->loss_level) {
 		struct dn_pkt_tag *dt = dn_tag_get(m);
-		if (dt)
-			dt->dn_dir = DIR_DROP;
+		if (dt) {
+			dt->dn_dir = DIR_DROP;  
+		}
 	}
 	return bits;
 }
@@ -512,8 +514,9 @@ serve_sched(struct mq *q, struct dn_sch_inst *si, uint64_t now)
 		uint64_t t;
 		KASSERT (bw > 0, ("bw=0 and credit<0 ?"));
 		t = div64(bw - 1 - si->credit, bw);
-		if (m)
+		if (m) {
 			dn_tag_get(m)->output_time += t;
+                }
 		si->kflags |= DN_ACTIVE;
 		heap_insert(&dn_cfg.evheap, now + t, si);
 	}
@@ -807,6 +810,7 @@ dummynet_send(struct mbuf *m)
 
 		case DIR_DROP:
 			/* drop the packet after some time */
+			io_pkt_drop++;
 			FREE_PKT(m);
 			break;
 
