@@ -770,16 +770,17 @@ dummynet_send(struct mbuf *m)
 			netisr_dispatch(NETISR_IP, m);
 			break;
 
-#ifdef INET6
+//#ifdef INET6
 		case DIR_IN | PROTO_IPV6:
 			netisr_dispatch(NETISR_IPV6, m);
 			break;
 
 		case DIR_OUT | PROTO_IPV6:
 			SET_HOST_IPLEN(mtod(m, struct ip *));
-			ip6_output(m, NULL, NULL, IPV6_FORWARDING, NULL, NULL, NULL);
+			//ip6_output(m, NULL, NULL, IPV6_FORWARDING, NULL, NULL, NULL);
+			ip_output(m, NULL, NULL, IPV6_FORWARDING, NULL, NULL);
 			break;
-#endif
+//#endif
 
 		case DIR_FWD | PROTO_IFB: /* DN_TO_IFB_FWD: */
 			if (bridge_dn_p != NULL)

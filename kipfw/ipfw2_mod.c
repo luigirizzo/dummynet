@@ -698,8 +698,9 @@ linux_lookup(const int proto, const __be32 saddr, const __be16 sport,
 			skb->dev->ifindex);
 #undef _OPT_NET_ARG
 
-		if (sk == NULL) /* no match, nothing to be done */
+		if (sk == NULL) /* no match, nothing to be done */ {
 			return -1;
+		}
 	}
 	ret = 1;	/* retrying won't make things better */
 	st = sk->sk_state;
@@ -832,6 +833,24 @@ static struct nf_hook_ops ipfw_ops[] __read_mostly = {
 		SET_MOD_OWNER
         },
 };
+
+static struct nf_hook_ops ipv6fw_ops[] __read_mostly = {
+        {
+                .hook           = call_ipfw,
+                .pf             = NFPROTO_IPV6,
+                .hooknum        = IPFW_HOOK_IN,
+                .priority       = NF_IP_PRI_FILTER,
+                SET_MOD_OWNER
+        },
+        {
+                .hook           = call_ipfw,
+                .pf             = NFPROTO_IPV6,
+                .hooknum        = NF_IP_POST_ROUTING,
+                .priority       = NF_IP_PRI_FILTER,
+                SET_MOD_OWNER
+        },
+};
+
 #endif /* __linux__ */
 
 /* descriptors for the children, until i find a way for the
@@ -903,6 +922,10 @@ ipfw_module_init(void)
         if (ret < 0)
 		goto unregister_sockopt;
 
+        ret = nf_register_hooks(ipv6fw_ops, ARRAY_SIZE(ipv6fw_ops));
+        if (ret < 0)
+		goto unregister_sockopt;
+
 	printf("%s loaded\n", __FUNCTION__);
 	return 0;
 
@@ -932,6 +955,7 @@ ipfw_module_exit(void)
 
 #else  /* linux hook */
         nf_unregister_hooks(ipfw_ops, ARRAY_SIZE(ipfw_ops));
+        nf_unregister_hooks(ipv6fw_ops, ARRAY_SIZE(ipv6fw_ops));
 	/* maybe drain the queue before unregistering ? */
 	nf_unregister_queue_handler(UNREG_QH_ARG(PF_INET, ipfw2_queue_handler) );
 	nf_unregister_sockopt(&ipfw_sockopts);
