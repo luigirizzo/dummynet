@@ -5,16 +5,19 @@ Make sure the linux kernel-headers package is installed.
 ```
  $ make all
 ```
+The build will produce
+    a kernel module,    ipfw_mod.ko 
+    a userland program, ipfw 
 
 
-##  Operation 
+#  Operation 
 
-### Load the kernel module
+## Load the kernel module
 ```
 # insmod ./dummynet2/ipfw_mod.ko
 ```
 
-### Add some ipfw rules
+## Add some ipfw rules
 ```
 # ipfw -q flush
 # ipfw -q pipe flush
@@ -23,7 +26,7 @@ Make sure the linux kernel-headers package is installed.
 ```
 
 
-### Unload the kernel module
+## Unload the kernel module
 ```
 # rmmod ipfw_mod.ko
 ```
@@ -38,13 +41,9 @@ from FreeBSD (roughly the version in HEAD as of February 2010),
 plus some glue code and headers written from scratch.  Unless
 specified otherwise, all the code here is under a BSD license.
 
-The build will produce
-
-    a kernel module,    ipfw_mod.ko 
-    a userland program, /sbin/ipfw 
-
 
 ## CREDITS:
+
 - Luigi Rizzo (main design and development)
 - Marta Carbone (Linux and Planetlab ports)
 - Riccardo Panicucci (modular scheduler support)
