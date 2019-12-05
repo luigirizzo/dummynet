@@ -5,9 +5,9 @@ Make sure the linux kernel-headers package is installed.
 ```
  $ make all
 ```
-The build will produce
-    a kernel module,    ipfw_mod.ko 
-    a userland program, ipfw 
+The build will produce:
+-    ipfw_mod.ko: the  kernel module
+-    ipfw: the  userland program
 
 
 #  Operation 
