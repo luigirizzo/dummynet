@@ -14,14 +14,14 @@ The build will produce:
 
 ## Load the kernel module
 ```
-# insmod ./dummynet2/ipfw_mod.ko
+# insmod ./kipfw-mod/ipfw_mod.ko
 ```
 
 ## Add some ipfw rules
 ```
 # ipfw -q flush
 # ipfw -q pipe flush
-# ipfw add pipe 3 in src-port 80,443,8080
+# ipfw add pipe 3 in dst-port 80,443,8080
 # ipfw pipe 3 config delay 80ms bw 40Mbit/s plr 0.01 queue 1000Kbytes
 ```
 
