@@ -46,13 +46,13 @@ Specific build instructions are below, and in general produce
 which you need to install on your system.
 
 CREDITS:
-    Luigi Rizzo (main design and development)
-    Marta Carbone (Linux and Planetlab ports)
-    Riccardo Panicucci (modular scheduler support)
-    Francesco Magno (Windows port)
-    Fabio Checconi (the QFQ scheduler)
-    Funding from Universita` di Pisa (NETOS project),
-    European Commission (ONELAB2 project)
-    ACM SIGCOMM (Sigcomm Community Projects Award, April 2012)
+    - Luigi Rizzo (main design and development)
+    - Marta Carbone (Linux and Planetlab ports)
+    - Riccardo Panicucci (modular scheduler support)
+    - Francesco Magno (Windows port)
+    - Fabio Checconi (the QFQ scheduler)
+    - Funding from Universita` di Pisa (NETOS project),
+    - European Commission (ONELAB2 project)
+    - ACM SIGCOMM (Sigcomm Community Projects Award, April 2012)
 
 
