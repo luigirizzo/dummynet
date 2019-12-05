@@ -247,7 +247,7 @@ print_flowset_parms(struct dn_fs *fs, char *prefix)
 	} else
 		sprintf(qs, "%3d sl.", l);
 	if (fs->plr)
-		sprintf(plr, "plr %f", 1.0 * fs->plr / (double)(0x7fffffff));
+		sprintf(plr, " plr %f", 1.0 * fs->plr / (double)(0x7fffffff));
 	else
 		plr[0] = '\0';
 
