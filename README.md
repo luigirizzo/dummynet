@@ -11,21 +11,21 @@ Make sure the linux kernel-headers package is installed.
 
 ### Load the kernel module
 ```
-	# insmod ./dummynet2/ipfw_mod.ko
+# insmod ./dummynet2/ipfw_mod.ko
 ```
 
 ### Add some ipfw rules
 ```
-    # ipfw -q flush
-    # ipfw -q pipe flush
-    # ipfw add pipe 3 in src-port 80,443,8080
-    # ipfw pipe 3 config delay 80ms bw 40Mbit/s plr 0.01 queue 1000Kbytes
+# ipfw -q flush
+# ipfw -q pipe flush
+# ipfw add pipe 3 in src-port 80,443,8080
+# ipfw pipe 3 config delay 80ms bw 40Mbit/s plr 0.01 queue 1000Kbytes
 ```
 
 
 ### Unload the kernel module
 ```
-	# rmmod ipfw_mod.ko
+# rmmod ipfw_mod.ko
 ```
 
 
@@ -38,21 +38,20 @@ from FreeBSD (roughly the version in HEAD as of February 2010),
 plus some glue code and headers written from scratch.  Unless
 specified otherwise, all the code here is under a BSD license.
 
-Specific build instructions are below, and in general produce
+The build will produce
 
-    a kernel module,    ipfw_mod.ko (ipfw.sys on windows)
-    a userland program, /sbin/ipfw (ipfw.exe on windows)
+    a kernel module,    ipfw_mod.ko 
+    a userland program, /sbin/ipfw 
 
-which you need to install on your system.
 
-CREDITS:
-    - Luigi Rizzo (main design and development)
-    - Marta Carbone (Linux and Planetlab ports)
-    - Riccardo Panicucci (modular scheduler support)
-    - Francesco Magno (Windows port)
-    - Fabio Checconi (the QFQ scheduler)
-    - Funding from Universita` di Pisa (NETOS project),
-    - European Commission (ONELAB2 project)
-    - ACM SIGCOMM (Sigcomm Community Projects Award, April 2012)
+## CREDITS:
+- Luigi Rizzo (main design and development)
+- Marta Carbone (Linux and Planetlab ports)
+- Riccardo Panicucci (modular scheduler support)
+- Francesco Magno (Windows port)
+- Fabio Checconi (the QFQ scheduler)
+- Funding from Universita` di Pisa (NETOS project),
+- European Commission (ONELAB2 project)
+- ACM SIGCOMM (Sigcomm Community Projects Award, April 2012)
 
 
