@@ -2192,8 +2192,8 @@ ip_dn_init(void)
 	 * and this is also useful for vimages
 	 */
 	/* queue limits */
-	dn_cfg.slot_limit = 250; /* Foot shooting limit for queues. */
-	dn_cfg.byte_limit = 1024 * 1024 * 3;
+	dn_cfg.slot_limit = 1000; /* Foot shooting limit for queues. */
+	dn_cfg.byte_limit = 1024 * 1024 * 12;
 	dn_cfg.expire = 1;
 
 	/* RED parameters */
@@ -2202,7 +2202,7 @@ ip_dn_init(void)
 	dn_cfg.red_max_pkt_size = 1500;	/* default max packet size */
 
 	/* hash tables */
-	dn_cfg.max_hash_size = 1024;	/* max in the hash tables */
+	dn_cfg.max_hash_size = 4 * 1024;	/* max in the hash tables */
 
 	if (dn_cfg.hash_size == 0) /* XXX or <= 0 ? */
 		dn_cfg.hash_size = 64;		/* default hash size */
