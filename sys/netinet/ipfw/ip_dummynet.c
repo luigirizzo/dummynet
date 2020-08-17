@@ -2192,7 +2192,7 @@ ip_dn_init(void)
 	 * and this is also useful for vimages
 	 */
 	/* queue limits */
-	dn_cfg.slot_limit = 1000; /* Foot shooting limit for queues. */
+	dn_cfg.slot_limit = 9000; /* Foot shooting limit for queues. */
 	dn_cfg.byte_limit = 1024 * 1024 * 12;
 	dn_cfg.expire = 1;
 
