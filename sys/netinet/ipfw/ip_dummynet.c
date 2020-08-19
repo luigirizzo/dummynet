@@ -2192,8 +2192,8 @@ ip_dn_init(void)
 	 * and this is also useful for vimages
 	 */
 	/* queue limits */
-	dn_cfg.slot_limit = 9000; /* Foot shooting limit for queues. */
-	dn_cfg.byte_limit = 1024 * 1024 * 12;
+	dn_cfg.slot_limit = 40000; /* Foot shooting limit for queues. */
+	dn_cfg.byte_limit = 1024 * 1024 * 50;
 	dn_cfg.expire = 1;
 
 	/* RED parameters */
@@ -2205,7 +2205,7 @@ ip_dn_init(void)
 	dn_cfg.max_hash_size = 4 * 1024;	/* max in the hash tables */
 
 	if (dn_cfg.hash_size == 0) /* XXX or <= 0 ? */
-		dn_cfg.hash_size = 64;		/* default hash size */
+		dn_cfg.hash_size = 1024;		/* default hash size */
 
 	/* hash tables for schedulers and flowsets are created
 	 * when the first scheduler/flowset is inserted.
