@@ -119,7 +119,7 @@ struct dn_link {
 	 * XXX what about burst ?
 	 */
 	int32_t		link_nr;
-	int		bandwidth;	/* bit/s or bits/tick.   */
+	uint32_t	bandwidth;	/* bit/s or bits/tick.   */
 	int		delay;		/* ms and ticks */
 	uint64_t	burst;		/* scaled. bits*Hz  XXX */
 };
@@ -204,7 +204,7 @@ struct dn_profile {
 	char	name[ED_MAX_NAME_LEN];
 	int	link_nr;
 	int	loss_level;
-	int	bandwidth;			// XXX use link bandwidth?
+	uint32_t bandwidth;			// XXX use link bandwidth?
 	int	samples_no;			/* actual len of samples[] */
 	int	samples[0];			/* may be shorter */
 };

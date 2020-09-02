@@ -369,6 +369,8 @@ list_pipes(struct dn_id *oid, struct dn_id *end)
 	    /* data rate */
 	    if (b == 0)
 		sprintf(bwbuf, "unlimited     ");
+	    else if (b >= 1e9)
+		sprintf(bwbuf, "%7.3f Gbit/s", b/1e9);
 	    else if (b >= 1000000)
 		sprintf(bwbuf, "%7.3f Mbit/s", b/1000000);
 	    else if (b >= 1000)
@@ -533,7 +535,7 @@ is_valid_number(const char *s)
  * set clocking interface or bandwidth value
  */
 static void
-read_bandwidth(char *arg, int *bandwidth, char *if_name, int namelen)
+read_bandwidth(char *arg, uint32_t *bandwidth, char *if_name, int namelen)
 {
 	if (*bandwidth != -1)
 		warnx("duplicate token, override bandwidth value!");
@@ -550,7 +552,7 @@ read_bandwidth(char *arg, int *bandwidth, char *if_name, int namelen)
 		if_name[namelen] = '\0';
 		*bandwidth = 0;
 	} else {	/* read bandwidth value */
-		int bw;
+		uint64_t bw;
 		char *end = NULL;
 
 		bw = strtoul(arg, &end, 0);
@@ -560,16 +562,19 @@ read_bandwidth(char *arg, int *bandwidth, char *if_name, int namelen)
 		} else if (*end == 'M' || *end == 'm') {
 			end++;
 			bw *= 1000000;
-		}
+		} else if (*end == 'G' || *end == 'g') {
+			end++;
+			bw *= 1e9;
+                }
 		if ((*end == 'B' &&
 			_substrcmp2(end, "Bi", "Bit/s") != 0) ||
 		    _substrcmp2(end, "by", "bytes") == 0)
 			bw *= 8;
 
-		if (bw < 0)
-			errx(EX_DATAERR, "bandwidth too large");
+		if (bw > 4294967295U)
+			errx(EX_DATAERR, "bandwidth %lu too large", bw);
 
-		*bandwidth = bw;
+		*bandwidth = (uint32_t) bw;
 		if (if_name)
 			if_name[0] = '\0';
 	}
