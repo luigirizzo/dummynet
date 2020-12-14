@@ -462,6 +462,9 @@ serve_sched(struct mq *q, struct dn_sch_inst *si, uint64_t now)
 	int delay_line_idle = (si->dline.mq.head == NULL);
 	int done;
 	uint32_t bw;
+	uint32_t jitter = s->link.jitter;
+        if (jitter > 1) 
+            jitter = random() % jitter;
 
 	if (q == NULL) {
 		q = &def_q;
@@ -500,7 +503,7 @@ serve_sched(struct mq *q, struct dn_sch_inst *si, uint64_t now)
 			(m->m_pkthdr.len * 8 + extra_bits(m, s));
 		si->credit -= len_scaled;
 		/* Move packet in the delay line */
-		dn_tag_get(m)->output_time = dn_cfg.curr_time + s->link.delay;
+		dn_tag_get(m)->output_time = dn_cfg.curr_time + s->link.delay + jitter;
 		mq_append(&si->dline.mq, m);
 	}
 

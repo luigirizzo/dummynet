@@ -61,6 +61,7 @@ static struct _s_x dummynet_params[] = {
 	{ "bw",			TOK_BW },
 	{ "bandwidth",		TOK_BW },
 	{ "delay",		TOK_DELAY },
+	{ "jitter",		TOK_JITTER },
 	{ "link",		TOK_LINK },
 	{ "pipe",		TOK_PIPE },
 	{ "queue",		TOK_QUEUE },
@@ -381,8 +382,8 @@ list_pipes(struct dn_id *oid, struct dn_id *end)
 	    if (humanize_number(burst, sizeof(burst), p->burst,
 		    "", HN_AUTOSCALE, 0) < 0 || co.verbose)
 		sprintf(burst, "%d", (int)p->burst);
-	    sprintf(buf, "%05d: %s %4d ms burst %s",
-		p->link_nr % DN_MAX_ID, bwbuf, p->delay, burst);
+	    sprintf(buf, "%05d: %s delay %4dms jitter %4dms burst %s",
+		p->link_nr % DN_MAX_ID, bwbuf, p->delay, p->jitter, burst);
 	    }
 	    break;
 
@@ -509,6 +510,7 @@ ipfw_delete_pipe(int do_pipe, int i)
 #define ED_TOK_LOSS	"loss-level"
 #define ED_TOK_NAME	"name"
 #define ED_TOK_DELAY	"delay"
+#define ED_TOK_JITTER   "jitter"
 #define ED_TOK_PROB	"prob"
 #define ED_TOK_BW	"bw"
 #define ED_SEPARATORS	" \t\n"
@@ -752,6 +754,10 @@ load_extra_delays(const char *filename, struct dn_profile *p,
 			errx(ED_EFMT("duplicated token: %s"), name);
 		    delay_first = 1;
 		    do_points = 1;
+		} else if (!strcasecmp(name, ED_TOK_JITTER)) {
+		    if (do_points)
+			errx(ED_EFMT("duplicated token: %s"), name);
+		    do_points = 0;
 		} else if (!strcasecmp(name, ED_TOK_PROB)) {
 		    if (do_points)
 			errx(ED_EFMT("duplicated token: %s"), name);
@@ -1130,6 +1136,13 @@ end_mask:
 			NEED(p, "delay is only for links");
 			NEED1("delay needs argument 0..10000ms\n");
 			p->delay = strtoul(av[0], NULL, 0);
+			ac--; av++;
+			break;
+
+		case TOK_JITTER:
+			NEED(p, "jitter is only for links");
+			NEED1("jitter needs argument 0..10000ms\n");
+			p->jitter = strtoul(av[0], NULL, 0);
 			ac--; av++;
 			break;
 

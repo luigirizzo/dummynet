@@ -163,6 +163,7 @@ struct dn_pipe7 {        /* a pipe */
 	int pipe_nr ;       /* number   */
 	uint32_t bandwidth;      /* really, bytes/tick.  */
 	int delay ;         /* really, ticks    */
+	int jitter;         /* really, ticks    */
 
 	struct  mbuf *head, *tail ; /* packets in delay line */
 
@@ -229,6 +230,7 @@ struct dn_pipe8 {        /* a pipe */
 	int pipe_nr ;       /* number   */
 	uint32_t bandwidth;      /* really, bytes/tick.  */
 	int delay ;         /* really, ticks    */
+	int jitter ;         /* really, ticks    */
 
 	struct  mbuf *head, *tail ; /* packets in delay line */
 
@@ -448,6 +450,7 @@ dn_compat_config_pipe(struct dn_sch *sch, struct dn_link *p,
 	/* Common to 7 and 8 */
 	p->bandwidth = p7->bandwidth;
 	p->delay = p7->delay;
+	p->jitter = p7->jitter;
 	if (!is7) {
 		/* FreeBSD 8 has burst  */
 		p->burst = p8->burst;

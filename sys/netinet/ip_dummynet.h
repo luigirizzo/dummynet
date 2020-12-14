@@ -122,6 +122,7 @@ struct dn_link {
 	uint32_t	bandwidth;	/* bit/s or bits/tick.   */
 	int		delay;		/* ms and ticks */
 	uint64_t	burst;		/* scaled. bits*Hz  XXX */
+	uint32_t	jitter;		/* delay variation */
 };
 
 /*

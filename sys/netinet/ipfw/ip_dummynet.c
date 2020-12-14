@@ -1259,6 +1259,7 @@ config_link(struct dn_link *p, struct dn_id *arg)
 	 * burst ???
 	 */
 	p->delay = (p->delay * hz) / 1000;
+	p->jitter = (p->jitter * hz) / 1000;
 	/* Scale burst size: bytes -> bits * hz */
 	p->burst *= 8 * hz;
 
@@ -1280,6 +1281,7 @@ config_link(struct dn_link *p, struct dn_id *arg)
 	    s->link.oid = p->oid;
 	    s->link.link_nr = i;
 	    s->link.delay = p->delay;
+	    s->link.jitter = p->jitter;
 	    if (s->link.bandwidth != p->bandwidth) {
 		/* XXX bandwidth changes, need to update red params */
 	    s->link.bandwidth = p->bandwidth;
