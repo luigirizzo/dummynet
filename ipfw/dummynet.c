@@ -61,6 +61,7 @@ static struct _s_x dummynet_params[] = {
 	{ "bw",			TOK_BW },
 	{ "bandwidth",		TOK_BW },
 	{ "delay",		TOK_DELAY },
+	{ "jitter",		TOK_JITTER },
 	{ "link",		TOK_LINK },
 	{ "pipe",		TOK_PIPE },
 	{ "queue",		TOK_QUEUE },
@@ -247,7 +248,7 @@ print_flowset_parms(struct dn_fs *fs, char *prefix)
 	} else
 		sprintf(qs, "%3d sl.", l);
 	if (fs->plr)
-		sprintf(plr, "plr %f", 1.0 * fs->plr / (double)(0x7fffffff));
+		sprintf(plr, " plr %f", 1.0 * fs->plr / (double)(0x7fffffff));
 	else
 		plr[0] = '\0';
 
@@ -285,8 +286,8 @@ print_extra_delay_parms(struct dn_profile *p)
 
 	loss = p->loss_level;
 	loss /= p->samples_no;
-	printf("\t profile: name \"%s\" loss %f samples %d\n",
-		p->name, loss, p->samples_no);
+	printf("\t profile: name \"%s\" loss %f samples %d loss_level %d\n",
+		p->name, loss, p->samples_no, p->loss_level);
 }
 
 static void
@@ -369,6 +370,8 @@ list_pipes(struct dn_id *oid, struct dn_id *end)
 	    /* data rate */
 	    if (b == 0)
 		sprintf(bwbuf, "unlimited     ");
+	    else if (b >= 1e9)
+		sprintf(bwbuf, "%7.3f Gbit/s", b/1e9);
 	    else if (b >= 1000000)
 		sprintf(bwbuf, "%7.3f Mbit/s", b/1000000);
 	    else if (b >= 1000)
@@ -379,8 +382,8 @@ list_pipes(struct dn_id *oid, struct dn_id *end)
 	    if (humanize_number(burst, sizeof(burst), p->burst,
 		    "", HN_AUTOSCALE, 0) < 0 || co.verbose)
 		sprintf(burst, "%d", (int)p->burst);
-	    sprintf(buf, "%05d: %s %4d ms burst %s",
-		p->link_nr % DN_MAX_ID, bwbuf, p->delay, burst);
+	    sprintf(buf, "%05d: %s delay %4dms jitter %4dms burst %s",
+		p->link_nr % DN_MAX_ID, bwbuf, p->delay, p->jitter, burst);
 	    }
 	    break;
 
@@ -507,6 +510,7 @@ ipfw_delete_pipe(int do_pipe, int i)
 #define ED_TOK_LOSS	"loss-level"
 #define ED_TOK_NAME	"name"
 #define ED_TOK_DELAY	"delay"
+#define ED_TOK_JITTER   "jitter"
 #define ED_TOK_PROB	"prob"
 #define ED_TOK_BW	"bw"
 #define ED_SEPARATORS	" \t\n"
@@ -533,7 +537,7 @@ is_valid_number(const char *s)
  * set clocking interface or bandwidth value
  */
 static void
-read_bandwidth(char *arg, int *bandwidth, char *if_name, int namelen)
+read_bandwidth(char *arg, uint32_t *bandwidth, char *if_name, int namelen)
 {
 	if (*bandwidth != -1)
 		warnx("duplicate token, override bandwidth value!");
@@ -550,7 +554,7 @@ read_bandwidth(char *arg, int *bandwidth, char *if_name, int namelen)
 		if_name[namelen] = '\0';
 		*bandwidth = 0;
 	} else {	/* read bandwidth value */
-		int bw;
+		uint64_t bw;
 		char *end = NULL;
 
 		bw = strtoul(arg, &end, 0);
@@ -560,16 +564,19 @@ read_bandwidth(char *arg, int *bandwidth, char *if_name, int namelen)
 		} else if (*end == 'M' || *end == 'm') {
 			end++;
 			bw *= 1000000;
-		}
+		} else if (*end == 'G' || *end == 'g') {
+			end++;
+			bw *= 1e9;
+                }
 		if ((*end == 'B' &&
 			_substrcmp2(end, "Bi", "Bit/s") != 0) ||
 		    _substrcmp2(end, "by", "bytes") == 0)
 			bw *= 8;
 
-		if (bw < 0)
-			errx(EX_DATAERR, "bandwidth too large");
+		if (bw > 4294967295U)
+			errx(EX_DATAERR, "bandwidth %lu too large", bw);
 
-		*bandwidth = bw;
+		*bandwidth = (uint32_t) bw;
 		if (if_name)
 			if_name[0] = '\0';
 	}
@@ -747,6 +754,10 @@ load_extra_delays(const char *filename, struct dn_profile *p,
 			errx(ED_EFMT("duplicated token: %s"), name);
 		    delay_first = 1;
 		    do_points = 1;
+		} else if (!strcasecmp(name, ED_TOK_JITTER)) {
+		    if (do_points)
+			errx(ED_EFMT("duplicated token: %s"), name);
+		    do_points = 0;
 		} else if (!strcasecmp(name, ED_TOK_PROB)) {
 		    if (do_points)
 			errx(ED_EFMT("duplicated token: %s"), name);
@@ -1125,6 +1136,13 @@ end_mask:
 			NEED(p, "delay is only for links");
 			NEED1("delay needs argument 0..10000ms\n");
 			p->delay = strtoul(av[0], NULL, 0);
+			ac--; av++;
+			break;
+
+		case TOK_JITTER:
+			NEED(p, "jitter is only for links");
+			NEED1("jitter needs argument 0..10000ms\n");
+			p->jitter = strtoul(av[0], NULL, 0);
 			ac--; av++;
 			break;
 

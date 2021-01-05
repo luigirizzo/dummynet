@@ -49,6 +49,9 @@
 #include <sys/mbuf.h>			/* sizeof struct mbuf */
 #include <sys/param.h>			/* NGROUPS */
 
+#include "linux_kernel_version.h"
+#include "linux_netfilter.h"
+
 #ifndef D
 #define ND(fmt, ...) do {} while (0)
 #define D1(fmt, ...) do {} while (0)
@@ -228,7 +231,7 @@ ipfw_ctl_h(struct sockopt *s, int cmd, int dir, int len, void __user *user)
 	memset(&t, 0, sizeof(t));
 	s->sopt_td = &t;
 	
-	//printf("%s called with cmd %d len %d sopt %p user %p\n", __FUNCTION__, cmd, len, s, user);
+	//printf("%s called with cmd %d dir %d len %d sopt %p user %p\n", __FUNCTION__, cmd, dir, len, s, user);
 
 	if (ip_fw_ctl_ptr && cmd != IP_DUMMYNET3 && (cmd == IP_FW3 ||
 	    cmd < IP_DUMMYNET_CONFIGURE))
@@ -376,6 +379,7 @@ do_ipfw_set_ctl(struct sock *sk, int cmd, void __user *user, unsigned int len)
 {
 	struct sockopt s;	/* pass arguments */
 	(void)sk;		/* UNUSED */
+        bzero(&s, sizeof(struct sockopt));
 	return ipfw_ctl_h(&s, cmd, SOPT_SET, len, user);
 }
 
@@ -386,7 +390,9 @@ int
 do_ipfw_get_ctl(struct sock *sk, int cmd, void __user *user, int *len)
 {
 	struct sockopt s;	/* pass arguments */
-	int ret = ipfw_ctl_h(&s, cmd, SOPT_GET, *len, user);
+	int ret;
+        bzero(&s, sizeof(struct sockopt));
+	ret = ipfw_ctl_h(&s, cmd, SOPT_GET, *len, user);
 
 	(void)sk;		/* UNUSED */
 	*len = s.sopt_valsize;	/* return length back to the caller */
@@ -465,23 +471,9 @@ static struct nf_sockopt_ops ipfw_sockopts = {
  * XXX note that in 2.4 and up to 2.6.22 the skbuf is passed as sk_buff**
  * so we have an #ifdef to set the proper argument type.
  */
-static unsigned int
-call_ipfw(
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0)
-	unsigned int hooknum,
-#else
-	const struct nf_hook_ops *hooknum,
-#endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,23) // in 2.6.22 we have **
-	struct sk_buff  **skb,
-#else
-	struct sk_buff  *skb,
-#endif
-	const struct net_device *in, const struct net_device *out,
-	int (*okfn)(struct sk_buff *))
+static unsigned int call_ipfw NF_HOOK_PARAMLIST
 {
-	(void)hooknum; (void)skb; (void)in; (void)out; (void)okfn; /* UNUSED */
 	return NF_QUEUE;
 }
 
@@ -556,7 +548,9 @@ ipfw2_queue_handler(QH_ARGS)
 	m->m_skb = skb;
 	m->m_len = skb->len;		/* len from ip header to end */
 	m->m_pkthdr.len = skb->len;	/* total packet len */
-	m->m_pkthdr.rcvif = info->indev;
+
+        m->m_pkthdr.rcvif = NFINFO_RECVIF;
+
 	m->queue_entry = info;
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,22)	/* XXX was 2.6.0 */
 	m->m_data = (char *)skb->nh.iph;
@@ -565,10 +559,10 @@ ipfw2_queue_handler(QH_ARGS)
 #endif
 
 	/* XXX add the interface */
-	if (info->hook == IPFW_HOOK_IN) {
-		ret = ipfw_check_hook(NULL, &m, info->indev, PFIL_IN, NULL);
+	if (NFINFO_HOOK == IPFW_HOOK_IN) {
+		ret = ipfw_check_hook(NULL, &m, NFINFO_RECVIF, PFIL_IN, NULL);
 	} else {
-		ret = ipfw_check_hook(NULL, &m, info->outdev, PFIL_OUT, NULL);
+		ret = ipfw_check_hook(NULL, &m, NFINFO_OUTIF, PFIL_OUT, NULL);
 	}
 
 	if (m != NULL) {	/* Accept. reinject and free the mbuf */
@@ -704,8 +698,9 @@ linux_lookup(const int proto, const __be32 saddr, const __be16 sport,
 			skb->dev->ifindex);
 #undef _OPT_NET_ARG
 
-		if (sk == NULL) /* no match, nothing to be done */
+		if (sk == NULL) /* no match, nothing to be done */ {
 			return -1;
+		}
 	}
 	ret = 1;	/* retrying won't make things better */
 	st = sk->sk_state;
@@ -838,6 +833,24 @@ static struct nf_hook_ops ipfw_ops[] __read_mostly = {
 		SET_MOD_OWNER
         },
 };
+
+static struct nf_hook_ops ipv6fw_ops[] __read_mostly = {
+        {
+                .hook           = call_ipfw,
+                .pf             = NFPROTO_IPV6,
+                .hooknum        = IPFW_HOOK_IN,
+                .priority       = NF_IP_PRI_FILTER,
+                SET_MOD_OWNER
+        },
+        {
+                .hook           = call_ipfw,
+                .pf             = NFPROTO_IPV6,
+                .hooknum        = NF_IP_POST_ROUTING,
+                .priority       = NF_IP_PRI_FILTER,
+                SET_MOD_OWNER
+        },
+};
+
 #endif /* __linux__ */
 
 /* descriptors for the children, until i find a way for the
@@ -909,6 +922,10 @@ ipfw_module_init(void)
         if (ret < 0)
 		goto unregister_sockopt;
 
+        ret = nf_register_hooks(ipv6fw_ops, ARRAY_SIZE(ipv6fw_ops));
+        if (ret < 0)
+		goto unregister_sockopt;
+
 	printf("%s loaded\n", __FUNCTION__);
 	return 0;
 
@@ -938,6 +955,7 @@ ipfw_module_exit(void)
 
 #else  /* linux hook */
         nf_unregister_hooks(ipfw_ops, ARRAY_SIZE(ipfw_ops));
+        nf_unregister_hooks(ipv6fw_ops, ARRAY_SIZE(ipv6fw_ops));
 	/* maybe drain the queue before unregistering ? */
 	nf_unregister_queue_handler(UNREG_QH_ARG(PF_INET, ipfw2_queue_handler) );
 	nf_unregister_sockopt(&ipfw_sockopts);

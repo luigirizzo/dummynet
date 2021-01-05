@@ -353,6 +353,7 @@ dn_enqueue(struct dn_queue *q, struct mbuf* m, int drop)
 	uint64_t len;
 
 	if (q->fs == NULL || q->_si == NULL) {
+	        io_pkt_drop++;
 		printf("%s fs %p si %p, dropping\n",
 			__FUNCTION__, q->fs, q->_si);
 		FREE_PKT(m);
@@ -439,10 +440,11 @@ extra_bits(struct mbuf *m, struct dn_schk *s)
 		return 0;
 	index  = random() % pf->samples_no;
 	bits = div64((uint64_t)pf->samples[index] * s->link.bandwidth, 1000);
-	if (index >= pf->loss_level) {
+	if (pf->loss_level && index >= pf->loss_level) {
 		struct dn_pkt_tag *dt = dn_tag_get(m);
-		if (dt)
-			dt->dn_dir = DIR_DROP;
+		if (dt) {
+			dt->dn_dir = DIR_DROP;  
+		}
 	}
 	return bits;
 }
@@ -458,7 +460,11 @@ serve_sched(struct mq *q, struct dn_sch_inst *si, uint64_t now)
 	struct dn_schk *s = si->sched;
 	struct mbuf *m = NULL;
 	int delay_line_idle = (si->dline.mq.head == NULL);
-	int done, bw;
+	int done;
+	uint32_t bw;
+	uint32_t jitter = s->link.jitter;
+        if (jitter > 1) 
+            jitter = random() % jitter;
 
 	if (q == NULL) {
 		q = &def_q;
@@ -497,7 +503,7 @@ serve_sched(struct mq *q, struct dn_sch_inst *si, uint64_t now)
 			(m->m_pkthdr.len * 8 + extra_bits(m, s));
 		si->credit -= len_scaled;
 		/* Move packet in the delay line */
-		dn_tag_get(m)->output_time = dn_cfg.curr_time + s->link.delay;
+		dn_tag_get(m)->output_time = dn_cfg.curr_time + s->link.delay + jitter;
 		mq_append(&si->dline.mq, m);
 	}
 
@@ -512,8 +518,9 @@ serve_sched(struct mq *q, struct dn_sch_inst *si, uint64_t now)
 		uint64_t t;
 		KASSERT (bw > 0, ("bw=0 and credit<0 ?"));
 		t = div64(bw - 1 - si->credit, bw);
-		if (m)
+		if (m) {
 			dn_tag_get(m)->output_time += t;
+                }
 		si->kflags |= DN_ACTIVE;
 		heap_insert(&dn_cfg.evheap, now + t, si);
 	}
@@ -767,16 +774,17 @@ dummynet_send(struct mbuf *m)
 			netisr_dispatch(NETISR_IP, m);
 			break;
 
-#ifdef INET6
+//#ifdef INET6
 		case DIR_IN | PROTO_IPV6:
 			netisr_dispatch(NETISR_IPV6, m);
 			break;
 
 		case DIR_OUT | PROTO_IPV6:
 			SET_HOST_IPLEN(mtod(m, struct ip *));
-			ip6_output(m, NULL, NULL, IPV6_FORWARDING, NULL, NULL, NULL);
+			//ip6_output(m, NULL, NULL, IPV6_FORWARDING, NULL, NULL, NULL);
+			ip_output(m, NULL, NULL, IPV6_FORWARDING, NULL, NULL);
 			break;
-#endif
+//#endif
 
 		case DIR_FWD | PROTO_IFB: /* DN_TO_IFB_FWD: */
 			if (bridge_dn_p != NULL)
@@ -807,6 +815,7 @@ dummynet_send(struct mbuf *m)
 
 		case DIR_DROP:
 			/* drop the packet after some time */
+			io_pkt_drop++;
 			FREE_PKT(m);
 			break;
 

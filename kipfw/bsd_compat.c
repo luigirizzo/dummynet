@@ -217,9 +217,10 @@ sooptcopyout(struct sockopt *sopt, const void *buf, size_t len)
 
 	if (len < valsize)
 		sopt->sopt_valsize = valsize = len;
+
 	//printf("copyout buf = %p, sopt = %p, soptval = %p, len = %d \n", buf, sopt, sopt->sopt_val, len);
-	bcopy(buf, sopt->sopt_val, valsize);
-	return 0;
+	
+	return copy_to_user(sopt->sopt_val, buf, valsize);
 }
 
 /*
@@ -234,9 +235,8 @@ sooptcopyin(struct sockopt *sopt, void *buf, size_t len, size_t minlen)
 		return EINVAL;
 	if (valsize > len)
 		sopt->sopt_valsize = valsize = len;
-	//printf("copyin buf = %p, sopt = %p, soptval = %p, len = %d \n", buf, sopt, sopt->sopt_val, len);
-	bcopy(sopt->sopt_val, buf, valsize);
-	return 0;
+
+	return copy_from_user(buf, sopt->sopt_val, valsize);
 }
 
 void

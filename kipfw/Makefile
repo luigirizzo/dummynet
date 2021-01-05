@@ -63,7 +63,7 @@ IPFW_SRCS += ipfw2_mod.c bsd_compat.c
 
 # generic cflags used on all systems
 #ipfw-cflags += -DIPFW_HASHTABLES
-ipfw-cflags += -DIPFIREWALL_DEFAULT_TO_ACCEPT
+ipfw-cflags += -DIPFIREWALL_DEFAULT_TO_ACCEPT 
 # _BSD_SOURCE enables __FAVOR_BSD (udp/tcp bsd structs instead of posix)
 ipfw-cflags += -D_BSD_SOURCE
 ipfw-cflags += -DKERNEL_MODULE	# build linux kernel module
@@ -200,6 +200,7 @@ else # } { linux variables and targets
         awk '{printf "%03x%02x", $$3/256, $$3%256} ')
 
   $(warning ------------- linux version $(LIN_VER) (hex) ------------)
+
 # We have three sections: OpenWrt, Linux 2.4 and Linux 2.6
 
 ifeq ($(LIN_VER),openwrt)	#--- { The Makefile section for openwrt ---

@@ -293,8 +293,10 @@ struct sctphdr {
 #define PRIV_NETINET_IPFW       491     /* Administer IPFW firewall. */
 
 #define IP_FORWARDING           0x1             /* most of ip header exists */
+#define IPV6_FORWARDING         0x2             /* most of ip header exists */
 
 #define NETISR_IP       2               /* same as AF_INET */
+#define NETISR_IPV6     10              /* same as AF_INET6 */
 
 #define PRIV_NETINET_DUMMYNET   494     /* Administer DUMMYNET. */
 

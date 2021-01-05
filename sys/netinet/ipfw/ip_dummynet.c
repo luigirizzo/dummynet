@@ -1259,6 +1259,7 @@ config_link(struct dn_link *p, struct dn_id *arg)
 	 * burst ???
 	 */
 	p->delay = (p->delay * hz) / 1000;
+	p->jitter = (p->jitter * hz) / 1000;
 	/* Scale burst size: bytes -> bits * hz */
 	p->burst *= 8 * hz;
 
@@ -1280,6 +1281,7 @@ config_link(struct dn_link *p, struct dn_id *arg)
 	    s->link.oid = p->oid;
 	    s->link.link_nr = i;
 	    s->link.delay = p->delay;
+	    s->link.jitter = p->jitter;
 	    if (s->link.bandwidth != p->bandwidth) {
 		/* XXX bandwidth changes, need to update red params */
 	    s->link.bandwidth = p->bandwidth;
@@ -1646,7 +1648,6 @@ config_profile(struct dn_profile *pf, struct dn_id *arg)
 static void
 dummynet_flush(void)
 {
-
 	/* delete all schedulers and related links/queues/flowsets */
 	dn_ht_scan(dn_cfg.schedhash, schk_delete_cb,
 		(void *)(uintptr_t)DN_DELETE_FS);
@@ -2166,7 +2167,8 @@ ip_dn_ctl(struct sockopt *sopt)
 			D("argument len %d invalid", l);
 			break;
 		}
-		p = malloc(l, M_TEMP, M_WAITOK); // XXX can it fail ?
+		p = malloc(l, M_DUMMYNET, M_WAITOK | M_ZERO); // XXX can it fail ?
+
 		error = sooptcopyin(sopt, p, l, l);
 		if (error)
 			break ;
@@ -2186,14 +2188,14 @@ ip_dn_init(void)
 {
 	if (dn_cfg.init_done)
 		return;
-	printf("DUMMYNET %p with IPv6 initialized (100409)\n", curvnet);
+	printf("DUMMYNET initialized\n");
 	dn_cfg.init_done = 1;
 	/* Set defaults here. MSVC does not accept initializers,
 	 * and this is also useful for vimages
 	 */
 	/* queue limits */
-	dn_cfg.slot_limit = 100; /* Foot shooting limit for queues. */
-	dn_cfg.byte_limit = 1024 * 1024;
+	dn_cfg.slot_limit = 40000; /* Foot shooting limit for queues. */
+	dn_cfg.byte_limit = 1024 * 1024 * 50;
 	dn_cfg.expire = 1;
 
 	/* RED parameters */
@@ -2202,10 +2204,10 @@ ip_dn_init(void)
 	dn_cfg.red_max_pkt_size = 1500;	/* default max packet size */
 
 	/* hash tables */
-	dn_cfg.max_hash_size = 1024;	/* max in the hash tables */
+	dn_cfg.max_hash_size = 4 * 1024;	/* max in the hash tables */
 
 	if (dn_cfg.hash_size == 0) /* XXX or <= 0 ? */
-		dn_cfg.hash_size = 64;		/* default hash size */
+		dn_cfg.hash_size = 1024;		/* default hash size */
 
 	/* hash tables for schedulers and flowsets are created
 	 * when the first scheduler/flowset is inserted.

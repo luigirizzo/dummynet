@@ -13,7 +13,7 @@ all: $(TARGET)
 #TCC=c:/path/to/tcc
 
 # common flags
-EXTRA_CFLAGS += -O1
+EXTRA_CFLAGS += -g -ggdb3
 EXTRA_CFLAGS += -Wall
 EXTRA_CFLAGS += -include ../glue.h
 EXTRA_CFLAGS += -I ./include_e -I ./include
